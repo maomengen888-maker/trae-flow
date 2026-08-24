@@ -59,8 +59,9 @@ final class DynamicScreenshotManager: ObservableObject {
 
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/sbin/screencapture")
-        // -s 强制鼠标框选模式；拖拽任意区域，Esc 取消。
-        process.arguments = ["-i", "-s", "-x", destination.path]
+        // 显示 macOS 截图选择工具栏，并默认进入区域选择模式。
+        // 用户可在工具栏切换区域、窗口或全屏截图，Esc 取消。
+        process.arguments = ["-i", "-U", "-Jselection", "-x", destination.path]
         process.terminationHandler = { [weak self] process in
             Task { @MainActor in
                 guard let self else { return }

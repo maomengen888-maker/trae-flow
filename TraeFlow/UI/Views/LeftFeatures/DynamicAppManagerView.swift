@@ -137,7 +137,7 @@ struct DynamicAppManagerView: View {
             }
 
             Spacer()
-            Text("拖选区域，按 Esc 取消")
+            Text("可选择区域、窗口或全屏，按 Esc 取消")
                 .font(.system(size: 9))
                 .foregroundStyle(.secondary.opacity(0.8))
         }

@@ -988,6 +988,7 @@ struct NotchView: View {
                 LeftFeatureSwitcherBar(
                     onSelect: { _ in
                         isAIAgentPresented = false
+                        viewModel.openedSizeOverride = nil
                         viewModel.presentCustomExpanded(reason: .click)
                     },
                     showAllUnselected: isAIAgentPresented || viewModel.contentType == .instances
@@ -998,11 +999,10 @@ struct NotchView: View {
 
             // 展开态右上角提供 AI Agent 入口与常用控制。
             HStack(spacing: 8) {
-                DynamicAIAgentButton(isActive: isAIAgentPresented) {
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        isAIAgentPresented.toggle()
-                    }
-                }
+                DynamicAIAgentButton(
+                    isActive: isAIAgentPresented,
+                    action: toggleAIAgent
+                )
 
                 NotchSoundToggleButton(
                     isOn: settings.soundEnabled,
@@ -1056,6 +1056,22 @@ struct NotchView: View {
             return .notification
         case .click, .boot, .unknown:
             return .click
+        }
+    }
+
+    /// AI 使用更大的主内容区，避免从任务列表入口打开时继承 170pt 的紧凑高度。
+    private func toggleAIAgent() {
+        withAnimation(.easeInOut(duration: 0.22)) {
+            if isAIAgentPresented {
+                isAIAgentPresented = false
+                viewModel.openedSizeOverride = nil
+            } else {
+                viewModel.presentCustomExpanded(reason: .click)
+                viewModel.openedSizeOverride = viewModel.clampedResizeSize(
+                    CGSize(width: 1100, height: 800)
+                )
+                isAIAgentPresented = true
+            }
         }
     }
 
