@@ -14,6 +14,8 @@ import AppKit
 
 // Use NSPanel subclass for non-activating behavior
 class NotchPanel: NSPanel {
+    static let compactLevel = NSWindow.Level(rawValue: 151)
+    static let expandedLevel = NSWindow.Level.floating
 
     override init(
         contentRect: NSRect,
@@ -30,7 +32,9 @@ class NotchPanel: NSPanel {
 
         // Floating panel behavior
         isFloatingPanel = true
-        becomesKeyOnlyIfNeeded = true
+        // 展开后包含 Dify WebView 等文本输入控件，必须允许面板成为 key window，
+        // 否则中文输入法只有拼音组合文本而不会显示候选窗口。
+        becomesKeyOnlyIfNeeded = false
 
         // Transparent configuration
         isOpaque = false
@@ -55,7 +59,7 @@ class NotchPanel: NSPanel {
         // Flow 岛无法点击展开/切换功能。这类应用的遮罩窗口通常位于 `.popUpMenu` (101) 附近，
         // 因此把 Flow 岛抬到 `.popUpMenu + 50` (151)，盖过绝大多数 menu bar hider 的 overlay，
         // 同时仍低于 `.screenSaver` (1000)，避免压到系统屏保/锁屏界面。
-        level = NSWindow.Level(rawValue: 151)
+        level = Self.compactLevel
 
         // Enable tooltips even when app is inactive (needed for panel windows)
         allowsToolTipsWhenApplicationIsInactive = true
@@ -71,4 +75,14 @@ class NotchPanel: NSPanel {
 
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { false }
+
+    override func sendEvent(_ event: NSEvent) {
+        if event.type == .leftMouseDown, !ignoresMouseEvents {
+            // nonactivatingPanel 默认不会切换前台应用；显式激活后，WKWebView 才能
+            // 完整接收 NSTextInputClient 的中文候选与选择事件。
+            NSApp.activate(ignoringOtherApps: true)
+            makeKey()
+        }
+        super.sendEvent(event)
+    }
 }

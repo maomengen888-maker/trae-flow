@@ -247,9 +247,14 @@ class NotchWindowController: NSWindowController {
         // method returns, via reevaluateMouseEventIgnoringAfterStatusChange).
         switch viewModel.status {
         case .closed, .popping:
+            // 紧凑入口继续高于菜单栏管理工具的遮罩层。
+            window.level = NotchPanel.compactLevel
             window.ignoresMouseEvents = true
         case .opened:
-            break // dynamic management handles this
+            // 展开态降低到标准浮窗层级，确保中文输入法候选窗、文件选择器等
+            // 系统面板能够显示在 Dynamic 上方。
+            window.level = NotchPanel.expandedLevel
+            break // dynamic management handles ignoresMouseEvents
         }
     }
 }
