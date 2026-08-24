@@ -299,20 +299,39 @@ final class LeftFeatureStore: ObservableObject {
             didChange = true
         }
 
-        if defaults.integer(forKey: migrationKey) < targetVersion {
-            let coreIDs = Set(coreDefinitions.map { $0.id })
-            for index in features.indices {
-                features[index].isEnabled = coreIDs.contains(features[index].id)
-                if let definition = coreDefinitions.first(where: { $0.id == features[index].id }) {
+        // 每次启动都强制保持 Dynamic 的唯一三页布局，避免旧 TRAE 功能或
+        // 自定义演示因为历史缓存再次出现在顶部。
+        let coreIDs = Set(coreDefinitions.map { $0.id })
+        for index in features.indices {
+            if let definition = coreDefinitions.first(where: { $0.id == features[index].id }) {
+                if features[index].kind != definition.kind
+                    || !features[index].isEnabled
+                    || features[index].sortOrder != definition.order
+                    || features[index].expandedWidth != definition.width
+                    || features[index].expandedHeight != definition.height
+                    || !features[index].expandedPinned {
                     features[index].kind = definition.kind
+                    features[index].isEnabled = true
                     features[index].sortOrder = definition.order
                     features[index].expandedWidth = definition.width
                     features[index].expandedHeight = definition.height
                     features[index].expandedPinned = true
+                    didChange = true
                 }
+            } else if features[index].isEnabled || coreIDs.contains(features[index].id) {
+                features[index].isEnabled = false
+                didChange = true
             }
+        }
+
+        if compactFeatureID != LeftFeature.appManagerID {
             compactFeatureID = LeftFeature.appManagerID
+        }
+        if expandedActiveFeatureID != LeftFeature.appManagerID {
             expandedActiveFeatureID = LeftFeature.appManagerID
+        }
+
+        if defaults.integer(forKey: migrationKey) < targetVersion {
             defaults.set(targetVersion, forKey: migrationKey)
             didChange = true
         }

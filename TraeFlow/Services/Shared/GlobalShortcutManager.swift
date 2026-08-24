@@ -10,6 +10,8 @@ extension Notification.Name {
     static let traeFlowExpandLeftFeature = Notification.Name("traeFlowExpandLeftFeature")
     /// 自定义 HTML 区域请求收起 Flow 岛展开面板（HTML 通过 traeFlowCollapse bridge 触发）
     static let traeFlowCollapseLeftExpanded = Notification.Name("traeFlowCollapseLeftExpanded")
+    /// Dynamic 截图快捷键触发。
+    static let dynamicCaptureScreenshot = Notification.Name("dynamicCaptureScreenshot")
 }
 
 @MainActor
@@ -22,6 +24,7 @@ final class GlobalShortcutManager {
         case leftFeature(id: String)
         /// 位置式快捷键（修饰键 + 数字 1-9）指向的已启用功能索引（0-based）
         case leftFeaturePositional(index: Int)
+        case screenshot
     }
 
     private var hotKeyRefs: [HotKeyEntry: EventHotKeyRef] = [:]
@@ -86,6 +89,15 @@ final class GlobalShortcutManager {
         unregisterAllHotKeys()
 
         var registeredShortcuts = Set<GlobalShortcut>()
+
+        // Dynamic 固定截图快捷键：Control + Shift + S。
+        if let screenshotShortcut = GlobalShortcut(
+            keyCode: UInt16(kVK_ANSI_S),
+            modifierFlags: [.control, .shift]
+        ) {
+            registeredShortcuts.insert(screenshotShortcut)
+            register(screenshotShortcut, for: .screenshot)
+        }
 
         // 1. 既有全局动作（活跃会话 / 会话列表），优先注册以避免被功能快捷键抢占
         for action in GlobalShortcutAction.allCases {
@@ -217,6 +229,8 @@ final class GlobalShortcutManager {
                 object: nil,
                 userInfo: ["featureID": enabled[index].id]
             )
+        case .screenshot:
+            NotificationCenter.default.post(name: .dynamicCaptureScreenshot, object: nil)
         }
 
         return noErr

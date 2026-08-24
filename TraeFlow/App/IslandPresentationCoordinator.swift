@@ -32,9 +32,7 @@ final class IslandPresentationCoordinator {
             hasPhysicalNotch: geometry.hasPhysicalNotch
         )
 
-        // Flow 岛固定展示，但启动时不默认展开；屏幕切换后也不恢复展开态。
-        bindViewModel()
-        bindSettings()
+        // Dynamic 只维护一个顶部主窗口，不再启用旧版宠物分离窗口。
         applySurfaceMode(AppSettings.surfaceMode, activationPolicy: .silent)
     }
 
@@ -47,7 +45,9 @@ final class IslandPresentationCoordinator {
             windowHeight: geometry.windowHeight,
             hasPhysicalNotch: geometry.hasPhysicalNotch
         )
-        applySurfaceMode(AppSettings.surfaceMode, performBootAnimation: false)
+        // 同一窗口只更新几何并刷新可见性，不能重建；否则点击 Dock、顶部
+        // 分类或屏幕焦点变化时会出现两个重叠界面。
+        requestDockedWindowVisibilityRefresh()
     }
 
     /// 强制刷新 docked Flow 岛窗口的可见性。

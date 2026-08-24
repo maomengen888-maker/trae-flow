@@ -19,6 +19,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // before any hook fires.
         _ = AppSettings.shared
         _ = LeftFeatureStore.shared
+        _ = DynamicScreenshotManager.shared
 
         // 正常启动时默认回到 Flow Island 形态，避免测试/开发残留把 surfaceMode 设为 floatingPet。
         if !launchConfiguration.isRunningTests {

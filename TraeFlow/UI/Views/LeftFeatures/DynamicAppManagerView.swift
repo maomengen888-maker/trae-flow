@@ -3,6 +3,7 @@ import SwiftUI
 
 struct DynamicAppManagerView: View {
     @ObservedObject private var store = InstalledApplicationStore.shared
+    @ObservedObject private var screenshotManager = DynamicScreenshotManager.shared
     @State private var pendingHideApplication: InstalledApplication?
 
     private let columns = [
@@ -21,24 +22,29 @@ struct DynamicAppManagerView: View {
                 endPoint: .bottomTrailing
             )
 
-            if store.applications.isEmpty {
-                VStack(spacing: 10) {
-                    Image(systemName: "square.grid.3x3")
-                        .font(.system(size: 32, weight: .light))
-                        .foregroundStyle(.cyan.opacity(0.8))
-                    Text("没有可显示的 APP")
-                        .foregroundStyle(.secondary)
-                }
-            } else {
-                ScrollView {
-                    LazyVGrid(columns: columns, alignment: .leading, spacing: 20) {
-                        ForEach(store.applications) { application in
-                            appTile(application)
-                        }
+            VStack(spacing: 0) {
+                if store.applications.isEmpty {
+                    VStack(spacing: 10) {
+                        Image(systemName: "square.grid.3x3")
+                            .font(.system(size: 32, weight: .light))
+                            .foregroundStyle(.cyan.opacity(0.8))
+                        Text("没有可显示的 APP")
+                            .foregroundStyle(.secondary)
                     }
-                    .padding(22)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    ScrollView {
+                        LazyVGrid(columns: columns, alignment: .leading, spacing: 20) {
+                            ForEach(store.applications) { application in
+                                appTile(application)
+                            }
+                        }
+                        .padding(22)
+                    }
+                    .scrollIndicators(.hidden)
                 }
-                .scrollIndicators(.hidden)
+
+                screenshotToolbar
             }
         }
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
@@ -63,6 +69,84 @@ struct DynamicAppManagerView: View {
             Text("不会卸载或删除真实 App 文件。")
         }
         .onAppear { store.refresh() }
+    }
+
+    private var screenshotToolbar: some View {
+        HStack(spacing: 10) {
+            Button {
+                screenshotManager.captureInteractive()
+            } label: {
+                HStack(spacing: 6) {
+                    if screenshotManager.isCapturing {
+                        ProgressView().controlSize(.small)
+                    } else {
+                        Image(systemName: "viewfinder")
+                    }
+                    Text(screenshotManager.isCapturing ? "正在截图" : "截图")
+                }
+                .font(.system(size: 11, weight: .semibold, design: .rounded))
+                .padding(.horizontal, 12)
+                .frame(height: 32)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(.cyan)
+            .disabled(screenshotManager.isCapturing)
+
+            Text("⌃ ⇧ S")
+                .font(.system(size: 9, weight: .medium, design: .monospaced))
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 8)
+                .frame(height: 24)
+                .background(Color.white.opacity(0.05), in: Capsule())
+
+            if let image = screenshotManager.latestImage {
+                Divider().frame(height: 30)
+
+                Image(nsImage: image)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: 48, height: 30)
+                    .clipShape(RoundedRectangle(cornerRadius: 5))
+                    .overlay(RoundedRectangle(cornerRadius: 5).strokeBorder(Color.cyan.opacity(0.25)))
+
+                Button {
+                    screenshotManager.togglePinned()
+                } label: {
+                    Label(
+                        screenshotManager.isPinned ? "取消置顶" : "固定置顶",
+                        systemImage: screenshotManager.isPinned ? "pin.slash.fill" : "pin.fill"
+                    )
+                    .font(.system(size: 10, weight: .medium))
+                }
+                .buttonStyle(.bordered)
+                .tint(.cyan)
+
+                Button {
+                    screenshotManager.revealLatestScreenshot()
+                } label: {
+                    Image(systemName: "folder")
+                }
+                .buttonStyle(.plain)
+                .help("在 Finder 中查看截图")
+            }
+
+            if let errorMessage = screenshotManager.errorMessage {
+                Text(errorMessage)
+                    .font(.system(size: 9))
+                    .foregroundStyle(.orange)
+            }
+
+            Spacer()
+            Text("拖选区域，按 Esc 取消")
+                .font(.system(size: 9))
+                .foregroundStyle(.secondary.opacity(0.8))
+        }
+        .padding(.horizontal, 14)
+        .frame(height: 54)
+        .background(.ultraThinMaterial)
+        .overlay(alignment: .top) {
+            Rectangle().fill(Color.cyan.opacity(0.12)).frame(height: 1)
+        }
     }
 
     private func appTile(_ application: InstalledApplication) -> some View {
