@@ -47,7 +47,7 @@ class NotchViewModel: ObservableObject {
     @Published private(set) var presentationMode: IslandPresentationMode = .docked
     @Published private(set) var detachedDisplayMode: DetachedIslandDisplayMode = .compact
     @Published var openReason: NotchOpenReason = .unknown
-    @Published var contentType: NotchContentType = .instances {
+    @Published var contentType: NotchContentType = .customExpanded {
         didSet {
             // Spec: 离开 customExpanded 时清除拖拽中的尺寸覆盖，避免残留到其他内容类型
             if contentType != .customExpanded {
@@ -69,6 +69,8 @@ class NotchViewModel: ObservableObject {
     @Published private(set) var isQuietBackgroundPresentationActive = false
     @Published private(set) var isSettingsPopoverPresented = false
     @Published private(set) var isInlineTextInputActive = false
+    /// Dynamic AI 是否正在占用主内容区；窗口控制器据此为输入法候选框调整层级。
+    @Published var isAIAgentPresented = false
     /// 屏幕切换后触发滑块从顶部向下动画的标志，由 IslandPresentationCoordinator 设置，NotchView 消费后复位
     @Published var triggerScreenSlideIn = false
 
@@ -725,12 +727,8 @@ class NotchViewModel: ObservableObject {
             if presentationMode == .docked, detachmentTriggerScreenRect.contains(location) {
                 beginDockedDetachmentTracking(source: .closed, startLocation: location)
             } else if isPointInHoverTrigger(location) {
-                // Spec 2.4: 左半区展开自定义内容面板，右半区展开会话列表。
-                if location.x < closedScreenRect.midX {
-                    presentCustomExpanded()
-                } else {
-                    presentSessionList(reason: .click)
-                }
+                LeftFeatureStore.shared.setExpandedActiveFeature(id: LeftFeature.appManagerID)
+                presentCustomExpanded()
             }
         }
     }
@@ -836,12 +834,8 @@ class NotchViewModel: ObservableObject {
             // 关闭态下没有触发分离手势的点击/抬起视为展开面板。
             // 不再要求 mouseUp 必须落在 closedScreenRect 内，也不检查轻微移动，
             // 避免正常点击因手抖或高 DPI 下的微小位移而无法展开。
-            // Spec 2.4: 左半区展开自定义内容面板，右半区展开会话列表。
-            if location.x < closedScreenRect.midX {
-                presentCustomExpanded()
-            } else {
-                presentSessionList(reason: .click)
-            }
+            LeftFeatureStore.shared.setExpandedActiveFeature(id: LeftFeature.appManagerID)
+            presentCustomExpanded()
         } else if tracking.source == .opened,
                   !tracking.isLongPressSatisfied,
                   !tracking.hasExceededTapMovementTolerance,
@@ -1015,13 +1009,8 @@ class NotchViewModel: ObservableObject {
     func performDeferredHoverOpenIfNeeded() {
         guard isHovering else { return }
         guard status == .closed || status == .popping else { return }
-        // Spec 2.4: hover 时左半侧展开自定义内容面板，右半侧展开会话列表。
-        let location = NSEvent.mouseLocation
-        if location.x < closedScreenRect.midX {
-            presentCustomExpanded(reason: .hover)
-        } else {
-            presentSessionList(reason: .hover)
-        }
+        LeftFeatureStore.shared.setExpandedActiveFeature(id: LeftFeature.appManagerID)
+        presentCustomExpanded(reason: .hover)
     }
 
     func notchClose() {
@@ -1030,7 +1019,9 @@ class NotchViewModel: ObservableObject {
         guard !currentPanelPinned else { return }
         status = .closed
         currentChatSession = nil
-        contentType = .instances
+        isAIAgentPresented = false
+        LeftFeatureStore.shared.setExpandedActiveFeature(id: LeftFeature.appManagerID)
+        contentType = .customExpanded
         openedMeasuredHeight = nil
         isInlineTextInputActive = false
         openedSizeOverride = nil
@@ -1137,15 +1128,18 @@ class NotchViewModel: ObservableObject {
     /// Approval cards should take priority over the underlying session detail view.
     func presentNotificationAttention() {
         currentChatSession = nil
-        contentType = .instances
+        LeftFeatureStore.shared.setExpandedActiveFeature(id: LeftFeature.appManagerID)
+        contentType = .customExpanded
         openedMeasuredHeight = nil
         notchOpen(reason: .notification)
     }
 
-    /// Go back to instances list and clear saved chat state
+    /// Dynamic 不展示旧会话列表；所有返回动作统一回到 APP 管理。
     func exitChat() {
         currentChatSession = nil
-        contentType = .instances
+        isAIAgentPresented = false
+        LeftFeatureStore.shared.setExpandedActiveFeature(id: LeftFeature.appManagerID)
+        contentType = .customExpanded
         openedMeasuredHeight = nil
     }
 
@@ -1160,14 +1154,11 @@ class NotchViewModel: ObservableObject {
 
     func presentSessionList(reason: NotchOpenReason = .click) {
         exitChat()
-        notchOpen(reason: reason)
+        presentCustomExpanded(reason: reason)
     }
 
     func toggleSessionList(reason: NotchOpenReason = .click) {
-        if status == .opened,
-           reason == .click,
-           openReason == .click,
-           case .instances = contentType {
+        if status == .opened, reason == .click, openReason == .click {
             notchClose()
             return
         }

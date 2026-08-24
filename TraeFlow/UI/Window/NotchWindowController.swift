@@ -186,6 +186,14 @@ class NotchWindowController: NSWindowController {
             }
             .store(in: &cancellables)
 
+        viewModel.$isAIAgentPresented
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self, weak window, weak viewModel] _ in
+                guard let self, let window, let viewModel else { return }
+                self.updateWindowPresentation(window: window, viewModel: viewModel)
+            }
+            .store(in: &cancellables)
+
         let auxiliaryPresentations: [AnyPublisher<Void, Never>] = [
             viewModel.$isFullscreenEdgeRevealActive
                 .map { _ in () }.eraseToAnyPublisher(),
@@ -251,9 +259,11 @@ class NotchWindowController: NSWindowController {
             window.level = NotchPanel.compactLevel
             window.ignoresMouseEvents = true
         case .opened:
-            // 展开态降低到标准浮窗层级，确保中文输入法候选窗、文件选择器等
-            // 系统面板能够显示在 Dynamic 上方。
-            window.level = NotchPanel.expandedLevel
+            // APP/需求/监控页面保持置顶；AI 输入页降低层级，确保中文输入法
+            // 候选窗与文件选择器显示在 Dynamic 上方。
+            window.level = viewModel.isAIAgentPresented
+                ? NotchPanel.expandedLevel
+                : NotchPanel.compactLevel
             break // dynamic management handles ignoresMouseEvents
         }
     }

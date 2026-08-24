@@ -85,8 +85,6 @@ struct NotchView: View {
     @State private var resizeHandleHovered: Bool = false
     /// Spec: 鼠标是否在展开面板的左右下角边缘热区（用于仅此时显示 resize handle）
     @State private var isMouseInResizeEdgeZone: Bool = false
-    /// Dynamic 内嵌 Dify Agent 是否正在占用主内容区。
-    @State private var isAIAgentPresented: Bool = false
 
     @Namespace private var activityNamespace
 
@@ -377,7 +375,7 @@ struct NotchView: View {
             .onChange(of: viewModel.status) { oldStatus, newStatus in
                 handleStatusChange(from: oldStatus, to: newStatus)
                 if newStatus == .closed {
-                    isAIAgentPresented = false
+                    viewModel.isAIAgentPresented = false
                 }
             }
     }
@@ -987,11 +985,11 @@ struct NotchView: View {
             if viewModel.contentType == .customExpanded || viewModel.contentType == .instances {
                 LeftFeatureSwitcherBar(
                     onSelect: { _ in
-                        isAIAgentPresented = false
+                        viewModel.isAIAgentPresented = false
                         viewModel.openedSizeOverride = nil
                         viewModel.presentCustomExpanded(reason: .click)
                     },
-                    showAllUnselected: isAIAgentPresented || viewModel.contentType == .instances
+                    showAllUnselected: viewModel.isAIAgentPresented || viewModel.contentType == .instances
                 )
             }
 
@@ -1000,7 +998,7 @@ struct NotchView: View {
             // 展开态右上角提供 AI Agent 入口与常用控制。
             HStack(spacing: 8) {
                 DynamicAIAgentButton(
-                    isActive: isAIAgentPresented,
+                    isActive: viewModel.isAIAgentPresented,
                     action: toggleAIAgent
                 )
 
@@ -1025,7 +1023,7 @@ struct NotchView: View {
 
     @ViewBuilder
     private var contentView: some View {
-        if isAIAgentPresented {
+        if viewModel.isAIAgentPresented {
             DynamicAIAgentView()
                 .frame(width: notchSize.width - 24)
                 .transition(.opacity)
@@ -1062,15 +1060,15 @@ struct NotchView: View {
     /// AI 使用更大的主内容区，避免从任务列表入口打开时继承 170pt 的紧凑高度。
     private func toggleAIAgent() {
         withAnimation(.easeInOut(duration: 0.22)) {
-            if isAIAgentPresented {
-                isAIAgentPresented = false
+            if viewModel.isAIAgentPresented {
+                viewModel.isAIAgentPresented = false
                 viewModel.openedSizeOverride = nil
             } else {
                 viewModel.presentCustomExpanded(reason: .click)
                 viewModel.openedSizeOverride = viewModel.clampedResizeSize(
                     CGSize(width: 1100, height: 800)
                 )
-                isAIAgentPresented = true
+                viewModel.isAIAgentPresented = true
             }
         }
     }

@@ -128,12 +128,39 @@ struct DynamicAppManagerView: View {
                 }
                 .buttonStyle(.plain)
                 .help("在 Finder 中查看截图")
+
+                Button {
+                    screenshotManager.uploadOrCopyLatestScreenshot()
+                } label: {
+                    if screenshotManager.isUploading {
+                        ProgressView()
+                            .controlSize(.small)
+                    } else {
+                        Label(
+                            screenshotManager.latestUploadURL == nil ? "上传并复制链接" : "复制图片链接",
+                            systemImage: screenshotManager.latestUploadURL == nil ? "icloud.and.arrow.up" : "link"
+                        )
+                        .font(.system(size: 10, weight: .medium))
+                    }
+                }
+                .buttonStyle(.bordered)
+                .disabled(screenshotManager.isUploading)
+                .help("仅点击后上传至公共图床，不会自动上传")
             }
 
             if let errorMessage = screenshotManager.errorMessage {
                 Text(errorMessage)
                     .font(.system(size: 9))
                     .foregroundStyle(.orange)
+            }
+
+            if let uploadMessage = screenshotManager.uploadMessage {
+                Text(uploadMessage)
+                    .font(.system(size: 9))
+                    .foregroundStyle(
+                        uploadMessage.hasPrefix("上传失败") ? Color.orange : Color.green.opacity(0.9)
+                    )
+                    .lineLimit(1)
             }
 
             Spacer()

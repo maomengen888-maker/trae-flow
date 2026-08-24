@@ -30,6 +30,12 @@ enum IslandExpandedRouteResolver {
         sessions: [SessionState],
         activeCompletionNotification: SessionCompletionNotification? = nil
     ) -> IslandExpandedRoute {
+        // Dynamic 产品模式不展示旧的“暂无会话”与任务通知页面；只要当前是
+        // 核心功能页面，就始终优先显示 APP/需求/监控内容。
+        if case .customExpanded = contentType {
+            return .customExpanded
+        }
+
         switch trigger {
         case .notification:
             if let session = highestPriorityAttentionSession(from: sessions) {
@@ -44,11 +50,6 @@ enum IslandExpandedRouteResolver {
 
         if case .chat(let session) = contentType {
             return .chat(session)
-        }
-
-        // Spec 2.4: 自定义内容全屏面板优先于默认列表/看板路由
-        if case .customExpanded = contentType {
-            return .customExpanded
         }
 
         switch (surface, trigger) {
