@@ -30,6 +30,19 @@ final class DynamicScreenshotManager: ObservableObject {
         isCapturing = true
         errorMessage = nil
 
+        // 先收起 Dynamic 主界面并暂时隐藏置顶截图，避免挡住系统的区域选择层。
+        NotificationCenter.default.post(name: .traeFlowCollapseLeftExpanded, object: nil)
+        let shouldRestorePinnedWindow = isPinned
+        pinnedWindowController?.window?.orderOut(nil)
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in
+            self?.startRegionCapture(shouldRestorePinnedWindow: shouldRestorePinnedWindow)
+        }
+    }
+
+    private func startRegionCapture(shouldRestorePinnedWindow: Bool) {
+        guard isCapturing else { return }
+
         let directory = BridgeRuntimePaths.runtimeDirectoryURL
             .appendingPathComponent("screenshots", isDirectory: true)
         do {
@@ -46,7 +59,8 @@ final class DynamicScreenshotManager: ObservableObject {
 
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/sbin/screencapture")
-        process.arguments = ["-i", "-x", destination.path]
+        // -s 强制鼠标框选模式；拖拽任意区域，Esc 取消。
+        process.arguments = ["-i", "-s", "-x", destination.path]
         process.terminationHandler = { [weak self] process in
             Task { @MainActor in
                 guard let self else { return }
@@ -54,6 +68,10 @@ final class DynamicScreenshotManager: ObservableObject {
                 guard process.terminationStatus == 0,
                       FileManager.default.fileExists(atPath: destination.path),
                       let image = NSImage(contentsOf: destination) else {
+                    if shouldRestorePinnedWindow,
+                       let previousImage = self.latestImage {
+                        self.showPinnedWindow(image: previousImage)
+                    }
                     return
                 }
                 self.latestScreenshotURL = destination

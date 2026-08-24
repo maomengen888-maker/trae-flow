@@ -21,6 +21,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         _ = LeftFeatureStore.shared
         _ = DynamicScreenshotManager.shared
 
+        // Dynamic 主面板不固定：点击其他应用或面板外部时自动收起。
+        // 截图图片仍可通过底部工具栏独立置顶。
+        AppSettings.keepIslandOpen = false
+
         // 正常启动时默认回到 Flow Island 形态，避免测试/开发残留把 surfaceMode 设为 floatingPet。
         if !launchConfiguration.isRunningTests {
             AppSettings.surfaceMode = .notch

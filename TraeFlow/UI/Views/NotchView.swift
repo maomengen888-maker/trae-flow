@@ -999,11 +999,6 @@ struct NotchView: View {
                     NSWorkspace.shared.open(target)
                 }
 
-                NotchPanelPinButton(
-                    isPinned: currentPanelPinned,
-                    action: toggleKeepIslandOpen
-                )
-
                 NotchSoundToggleButton(
                     isOn: settings.soundEnabled,
                     action: { AppSettings.soundEnabled.toggle() }

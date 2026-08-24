@@ -188,7 +188,7 @@ final class LeftFeatureStore: ObservableObject {
                 sortOrder: 0,
                 expandedWidth: 900,
                 expandedHeight: 620,
-                expandedPinned: true
+                expandedPinned: false
             ),
             LeftFeature(
                 id: LeftFeature.requirementManagerID,
@@ -197,7 +197,7 @@ final class LeftFeatureStore: ObservableObject {
                 sortOrder: 1,
                 expandedWidth: 980,
                 expandedHeight: 680,
-                expandedPinned: true
+                expandedPinned: false
             ),
             LeftFeature(
                 id: LeftFeature.monitorRemindersID,
@@ -206,7 +206,7 @@ final class LeftFeatureStore: ObservableObject {
                 sortOrder: 2,
                 expandedWidth: 860,
                 expandedHeight: 600,
-                expandedPinned: true
+                expandedPinned: false
             )
         ]
 
@@ -294,7 +294,7 @@ final class LeftFeatureStore: ObservableObject {
                 sortOrder: definition.order,
                 expandedWidth: definition.width,
                 expandedHeight: definition.height,
-                expandedPinned: true
+                expandedPinned: false
             ))
             didChange = true
         }
@@ -309,13 +309,13 @@ final class LeftFeatureStore: ObservableObject {
                     || features[index].sortOrder != definition.order
                     || features[index].expandedWidth != definition.width
                     || features[index].expandedHeight != definition.height
-                    || !features[index].expandedPinned {
+                    || features[index].expandedPinned {
                     features[index].kind = definition.kind
                     features[index].isEnabled = true
                     features[index].sortOrder = definition.order
                     features[index].expandedWidth = definition.width
                     features[index].expandedHeight = definition.height
-                    features[index].expandedPinned = true
+                    features[index].expandedPinned = false
                     didChange = true
                 }
             } else if features[index].isEnabled || coreIDs.contains(features[index].id) {
