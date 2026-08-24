@@ -32,7 +32,7 @@ struct DynamicAIAgentView: View {
             .padding(.horizontal, 4)
 
             CustomAreaWebView(
-                source: .remoteURL(DynamicAIAgentConfiguration.chatURL),
+                source: .dynamicAgent(DynamicAIAgentConfiguration.chatURL),
                 keepsAlive: true
             )
             .frame(maxWidth: .infinity, maxHeight: .infinity)

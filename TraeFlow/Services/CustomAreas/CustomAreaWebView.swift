@@ -107,6 +107,106 @@ struct CustomAreaWebView: NSViewRepresentable {
     })();
     """
 
+    /// Dynamic 专用 Dify Agent 视觉层。仅注入 `.dynamicAgent`，不修改远端应用逻辑。
+    static let dynamicAgentStyleScript = """
+    (function () {
+        var styleID = "dynamic-agent-future-theme";
+        var css = `
+            :root { color-scheme: dark; --dynamic-cyan: #35E6FF; --dynamic-blue: #2775FF; }
+            html, body, #__next {
+                background: radial-gradient(circle at 78% 5%, rgba(39,117,255,.16), transparent 32%),
+                            radial-gradient(circle at 12% 92%, rgba(53,230,255,.10), transparent 28%),
+                            #050914 !important;
+                color: #EAFBFF !important;
+                font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "PingFang SC", sans-serif !important;
+            }
+            body::before {
+                content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 9999;
+                background-image: linear-gradient(rgba(53,230,255,.025) 1px, transparent 1px),
+                                  linear-gradient(90deg, rgba(53,230,255,.025) 1px, transparent 1px);
+                background-size: 28px 28px;
+                mask-image: linear-gradient(to bottom, rgba(0,0,0,.55), transparent 80%);
+            }
+            * { scrollbar-width: thin; scrollbar-color: rgba(53,230,255,.32) transparent; }
+            ::-webkit-scrollbar { width: 7px; height: 7px; }
+            ::-webkit-scrollbar-track { background: transparent; }
+            ::-webkit-scrollbar-thumb { background: rgba(53,230,255,.30); border-radius: 8px; }
+            ::-webkit-scrollbar-thumb:hover { background: rgba(53,230,255,.52); }
+
+            [class*="bg-white"], [class*="bg-gray-50"], [class*="bg-gray-100"],
+            [class*="bg-slate-50"], [class*="bg-slate-100"] {
+                background-color: rgba(8,16,33,.86) !important;
+                backdrop-filter: blur(22px) saturate(135%);
+            }
+            [class*="border-gray"], [class*="border-slate"] {
+                border-color: rgba(53,230,255,.16) !important;
+            }
+            [class*="text-gray-900"], [class*="text-gray-800"], [class*="text-slate-900"] {
+                color: #F1FCFF !important;
+            }
+            [class*="text-gray-700"], [class*="text-gray-600"], [class*="text-slate-600"] {
+                color: rgba(218,246,255,.78) !important;
+            }
+            [class*="text-gray-500"], [class*="text-gray-400"] {
+                color: rgba(190,226,238,.58) !important;
+            }
+            [class*="shadow"] { box-shadow: 0 18px 55px rgba(0,0,0,.32) !important; }
+
+            aside, nav {
+                background: linear-gradient(180deg, rgba(8,18,38,.96), rgba(5,12,26,.92)) !important;
+                border-color: rgba(53,230,255,.13) !important;
+            }
+            button {
+                transition: transform .18s ease, border-color .18s ease, background-color .18s ease, box-shadow .18s ease !important;
+            }
+            button:not(:disabled):hover {
+                transform: translateY(-1px);
+                border-color: rgba(53,230,255,.42) !important;
+                box-shadow: 0 8px 24px rgba(39,117,255,.16) !important;
+            }
+            textarea, input, [contenteditable="true"], [role="textbox"] {
+                color: #F3FDFF !important;
+                caret-color: var(--dynamic-cyan) !important;
+            }
+            textarea::placeholder, input::placeholder { color: rgba(187,222,234,.46) !important; }
+            form:has(textarea), form:has([contenteditable="true"]), form:has([role="textbox"]) {
+                background: linear-gradient(135deg, rgba(11,24,49,.96), rgba(7,16,34,.98)) !important;
+                border: 1px solid rgba(53,230,255,.22) !important;
+                border-radius: 18px !important;
+                box-shadow: 0 14px 38px rgba(0,0,0,.36), inset 0 1px 0 rgba(255,255,255,.04) !important;
+            }
+            form:has(textarea):focus-within, form:has([contenteditable="true"]):focus-within,
+            form:has([role="textbox"]):focus-within {
+                border-color: rgba(53,230,255,.62) !important;
+                box-shadow: 0 0 0 3px rgba(53,230,255,.08), 0 18px 45px rgba(0,0,0,.42) !important;
+            }
+            .markdown-body, [class*="markdown"] { color: rgba(235,250,255,.92) !important; line-height: 1.72 !important; }
+            pre, code { background: rgba(2,8,18,.78) !important; border-color: rgba(53,230,255,.13) !important; }
+            a { color: #69E9FF !important; }
+            ::selection { background: rgba(53,230,255,.30); color: #FFFFFF; }
+        `;
+
+        function applyTheme() {
+            if (!document.getElementById(styleID)) {
+                var style = document.createElement("style");
+                style.id = styleID;
+                style.textContent = css;
+                (document.head || document.documentElement).appendChild(style);
+            }
+            document.querySelectorAll("body *").forEach(function (element) {
+                var text = (element.textContent || "").replace(/\\s+/g, " ").trim().toUpperCase();
+                if ((text === "POWERED BY DIFY" || text === "POWERED BY") && element.children.length < 4) {
+                    element.style.opacity = "0.28";
+                    element.style.filter = "grayscale(1)";
+                }
+            });
+        }
+
+        applyTheme();
+        new MutationObserver(applyTheme).observe(document.documentElement, { childList: true, subtree: true });
+    })();
+    """
+
     /// Spec: network-block-content-rule-list —— 内存缓存的 WKContentRuleList
     /// 首次获取后缓存，避免每次创建 WebView 都触发 store I/O。
     private static var cachedNetworkBlockRule: WKContentRuleList?
@@ -154,6 +254,8 @@ struct CustomAreaWebView: NSViewRepresentable {
         case localArea(CustomArea)
         /// 远程 URL
         case remoteURL(URL)
+        /// Dynamic 内嵌 Dify Agent（远程 URL + 专属未来科技主题）
+        case dynamicAgent(URL)
         /// Mineradio 网页（注入 Bridge 兼容层 + JSC 引擎）
         /// Spec: mineradio-bridge-compat-layer
         case mineradio(URL)
@@ -170,7 +272,7 @@ struct CustomAreaWebView: NSViewRepresentable {
         var allowsNetworkAccess: Bool {
             switch self {
             case .localArea(let area): return area.allowsNetworkAccess
-            case .remoteURL: return true
+            case .remoteURL, .dynamicAgent: return true
             case .mineradio: return true
             }
         }
@@ -184,6 +286,17 @@ struct CustomAreaWebView: NSViewRepresentable {
         /// 是否为 Mineradio 源（需注入 Bridge user script + 注册 message handler）
         var isMineradio: Bool {
             if case .mineradio = self { return true }
+            return false
+        }
+
+        var isRemoteSource: Bool {
+            if case .remoteURL = self { return true }
+            if case .dynamicAgent = self { return true }
+            return false
+        }
+
+        var isDynamicAgent: Bool {
+            if case .dynamicAgent = self { return true }
             return false
         }
     }
@@ -206,6 +319,7 @@ struct CustomAreaWebView: NSViewRepresentable {
         guard keepsAlive else { return nil }
         switch source {
         case .remoteURL(let url): return url
+        case .dynamicAgent(let url): return url
         case .mineradio(let url): return url
         case .localArea: return nil
         }
@@ -266,6 +380,15 @@ struct CustomAreaWebView: NSViewRepresentable {
             configuration.userContentController.addUserScript(scrollbarScript)
         }
 
+        if source.isDynamicAgent {
+            let agentStyleScript = WKUserScript(
+                source: Self.dynamicAgentStyleScript,
+                injectionTime: .atDocumentEnd,
+                forMainFrameOnly: true
+            )
+            configuration.userContentController.addUserScript(agentStyleScript)
+        }
+
         // Spec: 注册 JS Bridge —— 自定义 HTML 提示消息通道
         configuration.userContentController.add(context.coordinator, name: Self.hintMessageHandlerName)
         // Spec: 注册 JS Bridge —— 系统指标查询通道（HTML 可通过此通道获取真实 CPU/内存/负载数据）
@@ -313,7 +436,7 @@ struct CustomAreaWebView: NSViewRepresentable {
         // - `.remoteURL`：同 host 在 WebView 内导航，不同 host 转系统浏览器
         // - `.mineradio`：所有 http/https 主框架导航在 WebView 内（允许跨 host）
         // - `.localArea`：所有 http/https 主框架导航转系统浏览器
-        if case .remoteURL = source {
+        if source.isRemoteSource {
             context.coordinator.isRemoteSource = true
             context.coordinator.isMineradioSource = false
         } else if source.isMineradio {
@@ -390,7 +513,7 @@ struct CustomAreaWebView: NSViewRepresentable {
         // Spec: 同步保活标记与缓存键 —— dismantleNSView 据此决定是否移入离屏窗口
         context.coordinator.keepsAlive = keepsAlive
         context.coordinator.cachedURLString = cachedURL()?.absoluteString
-        if case .remoteURL = source {
+        if source.isRemoteSource {
             context.coordinator.isRemoteSource = true
             context.coordinator.isMineradioSource = false
         } else if source.isMineradio {
@@ -421,6 +544,14 @@ struct CustomAreaWebView: NSViewRepresentable {
                 context.coordinator.lastAreaID = nil
                 context.coordinator.lastEntryPointURL = nil
             }
+        case .dynamicAgent(let url):
+            if webView.url?.absoluteString != url.absoluteString {
+                loadArea(into: webView, context: context)
+            } else {
+                context.coordinator.lastRemoteURLString = url.absoluteString
+                context.coordinator.lastAreaID = nil
+                context.coordinator.lastEntryPointURL = nil
+            }
         case .mineradio(let url):
             if webView.url?.absoluteString != url.absoluteString {
                 loadArea(into: webView, context: context)
@@ -441,7 +572,7 @@ struct CustomAreaWebView: NSViewRepresentable {
         context.coordinator.keepsAlive = keepsAlive
         context.coordinator.cachedURLString = cachedURL()?.absoluteString
         // 同步源类型 —— decidePolicyFor 据此区分跳转策略
-        if case .remoteURL = source {
+        if source.isRemoteSource {
             context.coordinator.isRemoteSource = true
             context.coordinator.isMineradioSource = false
         } else if source.isMineradio {
@@ -462,6 +593,13 @@ struct CustomAreaWebView: NSViewRepresentable {
                 loadArea(into: webView, context: context)
             }
         case .remoteURL(let url):
+            let urlString = url.absoluteString
+            let needsReload = context.coordinator.lastRemoteURLString != urlString
+                || context.coordinator.lastAreaID != nil
+            if needsReload {
+                loadArea(into: webView, context: context)
+            }
+        case .dynamicAgent(let url):
             let urlString = url.absoluteString
             let needsReload = context.coordinator.lastRemoteURLString != urlString
                 || context.coordinator.lastAreaID != nil
@@ -490,6 +628,11 @@ struct CustomAreaWebView: NSViewRepresentable {
             context.coordinator.lastEntryPointURL = area.entryPointURL
             context.coordinator.lastRemoteURLString = nil
         case .remoteURL(let url):
+            webView.load(URLRequest(url: url))
+            context.coordinator.lastAreaID = nil
+            context.coordinator.lastEntryPointURL = nil
+            context.coordinator.lastRemoteURLString = url.absoluteString
+        case .dynamicAgent(let url):
             webView.load(URLRequest(url: url))
             context.coordinator.lastAreaID = nil
             context.coordinator.lastEntryPointURL = nil
