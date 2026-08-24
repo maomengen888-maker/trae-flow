@@ -85,6 +85,8 @@ struct NotchView: View {
     @State private var resizeHandleHovered: Bool = false
     /// Spec: 鼠标是否在展开面板的左右下角边缘热区（用于仅此时显示 resize handle）
     @State private var isMouseInResizeEdgeZone: Bool = false
+    /// Dynamic 内嵌 Dify Agent 是否正在占用主内容区。
+    @State private var isAIAgentPresented: Bool = false
 
     @Namespace private var activityNamespace
 
@@ -374,6 +376,9 @@ struct NotchView: View {
             }
             .onChange(of: viewModel.status) { oldStatus, newStatus in
                 handleStatusChange(from: oldStatus, to: newStatus)
+                if newStatus == .closed {
+                    isAIAgentPresented = false
+                }
             }
     }
 
@@ -982,9 +987,10 @@ struct NotchView: View {
             if viewModel.contentType == .customExpanded || viewModel.contentType == .instances {
                 LeftFeatureSwitcherBar(
                     onSelect: { _ in
+                        isAIAgentPresented = false
                         viewModel.presentCustomExpanded(reason: .click)
                     },
-                    showAllUnselected: viewModel.contentType == .instances
+                    showAllUnselected: isAIAgentPresented || viewModel.contentType == .instances
                 )
             }
 
@@ -992,11 +998,10 @@ struct NotchView: View {
 
             // 展开态右上角提供 AI Agent 入口与常用控制。
             HStack(spacing: 8) {
-                DynamicAIAgentButton {
-                    let configuredURL = UserDefaults.standard.string(forKey: "dynamicAIAgentWebURL")
-                    let target = configuredURL.flatMap(URL.init(string:))
-                        ?? URL(string: "https://cloud.dify.ai/apps")!
-                    NSWorkspace.shared.open(target)
+                DynamicAIAgentButton(isActive: isAIAgentPresented) {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        isAIAgentPresented.toggle()
+                    }
                 }
 
                 NotchSoundToggleButton(
@@ -1020,21 +1025,27 @@ struct NotchView: View {
 
     @ViewBuilder
     private var contentView: some View {
-        IslandOpenedContentView(
-            sessionMonitor: sessionMonitor,
-            viewModel: viewModel,
-            surface: .docked,
-            trigger: triggerForCurrentPresentation,
-            style: .docked,
-            activeCompletionNotification: activeCompletionNotification,
-            onAttentionActionCompleted: {},
-            onCompletionNotificationHoverChanged: handleCompletionNotificationHover,
-            onDismissCompletionNotification: {
-                clearCompletionNotifications(keepPanelOpen: true)
-            }
-        )
-        .frame(width: notchSize.width - 24) // Fixed width to prevent text reflow
-        // Removed .id() - was causing view recreation and performance issues
+        if isAIAgentPresented {
+            DynamicAIAgentView()
+                .frame(width: notchSize.width - 24)
+                .transition(.opacity)
+        } else {
+            IslandOpenedContentView(
+                sessionMonitor: sessionMonitor,
+                viewModel: viewModel,
+                surface: .docked,
+                trigger: triggerForCurrentPresentation,
+                style: .docked,
+                activeCompletionNotification: activeCompletionNotification,
+                onAttentionActionCompleted: {},
+                onCompletionNotificationHoverChanged: handleCompletionNotificationHover,
+                onDismissCompletionNotification: {
+                    clearCompletionNotifications(keepPanelOpen: true)
+                }
+            )
+            .frame(width: notchSize.width - 24) // Fixed width to prevent text reflow
+            // Removed .id() - was causing view recreation and performance issues
+        }
     }
 
     private var triggerForCurrentPresentation: IslandExpandedTrigger {
@@ -1847,9 +1858,9 @@ struct NotchView: View {
     }
 }
 
-/// Dynamic 的 AI Agent 快捷入口。配置完成前进入 Dify 控制台，后续可把
-/// `dynamicAIAgentWebURL` 写为已发布 Agent 的公开地址。
+/// Dynamic 的内嵌 AI Agent 入口。
 private struct DynamicAIAgentButton: View {
+    let isActive: Bool
     let action: () -> Void
     @State private var isHovering = false
 
@@ -1860,16 +1871,16 @@ private struct DynamicAIAgentButton: View {
                 Text("AI")
             }
             .font(.system(size: 10, weight: .semibold))
-            .foregroundStyle(isHovering ? Color.black : Color.cyan)
+            .foregroundStyle(isHovering || isActive ? Color.black : Color.cyan)
             .padding(.horizontal, 9)
             .frame(height: 28)
             .background(
-                Capsule().fill(isHovering ? Color.white.opacity(0.95) : Color.cyan.opacity(0.12))
+                Capsule().fill(isHovering || isActive ? Color.white.opacity(0.95) : Color.cyan.opacity(0.12))
             )
             .overlay(Capsule().strokeBorder(Color.cyan.opacity(0.35)))
         }
         .buttonStyle(.plain)
-        .help("打开 AI Agent")
+        .help(isActive ? "返回 Dynamic" : "打开 AI Agent")
         .onHover { isHovering = $0 }
     }
 }
