@@ -24,7 +24,8 @@ struct AppLaunchConfiguration: Equatable {
 
         self.isUITesting = isUITesting
         self.isRunningTests = isRunningTests
-        self.shouldInstallIntegrations = !isRunningTests
+        // Dynamic 不再安装 TRAE / AI 编码会话钩子。
+        self.shouldInstallIntegrations = false
         self.shouldCreateNotchWindow = !isRunningTests
         self.shouldObserveScreens = !isRunningTests
         self.shouldEnforceSingleInstance = !isRunningTests && !shouldAllowMultipleInstances
@@ -59,7 +60,8 @@ struct AppLaunchFlow: Equatable {
     ) {
         let shouldPresentOnboarding = false
 
-        self.shouldStartMonitoringImmediately = !configuration.isRunningTests
+        // Dynamic 的监控页直接读取本机指标，不启动旧会话监听服务。
+        self.shouldStartMonitoringImmediately = false
         self.shouldPresentSurfaceModeOnboarding = shouldPresentOnboarding
         self.shouldCreateInitialIslandWindow = configuration.shouldCreateNotchWindow
         self.shouldPresentSettingsWindowImmediately = configuration.shouldPresentSettingsWindowOnLaunch

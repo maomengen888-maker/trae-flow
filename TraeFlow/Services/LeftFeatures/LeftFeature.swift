@@ -49,6 +49,9 @@ func resolveIconKind(_ identifier: String?) -> IconKind {
 /// - newsnow: 内置 NewsNow 热点新闻功能，关联实例 baseURL（Spec: add-newsnow-built-in-feature）
 /// - mineradio: 内置 Mineradio 矿石电台，关联 pageURL，注入 Bridge 兼容层 + JSC 引擎（Spec: mineradio-bridge-compat-layer）
 enum LeftFeatureKind: Codable, Equatable, Hashable {
+    case appManager
+    case requirementManager
+    case monitorReminders
     case music
     case shelf
     case customArea(areaID: String)
@@ -164,6 +167,9 @@ extension LeftFeature {
     static let mineradioID = "mineradio"
     /// 内置 AI 热搜 webURL 功能（https://aihot.virxact.com/），默认启用且排在第一位
     static let aihotID = "aihot"
+    static let appManagerID = "dynamic-app-manager"
+    static let requirementManagerID = "dynamic-requirement-manager"
+    static let monitorRemindersID = "dynamic-monitor-reminders"
 
     /// 系统图标名（SF Symbols）。优先使用 `customIconName`（非空时覆盖所有 kind 默认图标）。
     var systemImage: String {
@@ -171,6 +177,12 @@ extension LeftFeature {
             return customIconName
         }
         switch kind {
+        case .appManager:
+            return "square.grid.3x3.fill"
+        case .requirementManager:
+            return "point.3.connected.trianglepath.dotted"
+        case .monitorReminders:
+            return "waveform.path.ecg"
         case .music:
             return "music.note"
         case .shelf:
@@ -197,6 +209,12 @@ extension LeftFeature {
             return customDisplayName
         }
         switch kind {
+        case .appManager:
+            return "APP 管理"
+        case .requirementManager:
+            return "需求管理"
+        case .monitorReminders:
+            return "监控提醒"
         case .music:
             return "音乐"
         case .shelf:

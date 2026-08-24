@@ -906,7 +906,7 @@ struct NotchView: View {
         switch feature.kind {
         case .music:
             MusicCompactView()
-        case .shelf, .newsnow, .webURL:
+        case .appManager, .requirementManager, .monitorReminders, .shelf, .newsnow, .webURL:
             // 内置功能紧凑态仅显示图标
             FeatureIconView(feature: feature, size: 14)
                 .frame(width: 24, height: 24)
@@ -990,13 +990,13 @@ struct NotchView: View {
 
             Spacer()
 
-            // 展开态顶部保留固定、声音、设置三个快捷按钮，
-            // 自定义内容展开时额外显示"切换到任务列表"按钮。
+            // 展开态右上角提供 AI Agent 入口与常用控制。
             HStack(spacing: 8) {
-                if viewModel.contentType == .customExpanded {
-                    InstanceListToggleButton {
-                        viewModel.presentSessionList(reason: .click)
-                    }
+                DynamicAIAgentButton {
+                    let configuredURL = UserDefaults.standard.string(forKey: "dynamicAIAgentWebURL")
+                    let target = configuredURL.flatMap(URL.init(string:))
+                        ?? URL(string: "https://cloud.dify.ai/apps")!
+                    NSWorkspace.shared.open(target)
                 }
 
                 NotchPanelPinButton(
@@ -1849,6 +1849,33 @@ struct NotchView: View {
         }
 
         return false
+    }
+}
+
+/// Dynamic 的 AI Agent 快捷入口。配置完成前进入 Dify 控制台，后续可把
+/// `dynamicAIAgentWebURL` 写为已发布 Agent 的公开地址。
+private struct DynamicAIAgentButton: View {
+    let action: () -> Void
+    @State private var isHovering = false
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 4) {
+                Image(systemName: "sparkles")
+                Text("AI")
+            }
+            .font(.system(size: 10, weight: .semibold))
+            .foregroundStyle(isHovering ? Color.black : Color.cyan)
+            .padding(.horizontal, 9)
+            .frame(height: 28)
+            .background(
+                Capsule().fill(isHovering ? Color.white.opacity(0.95) : Color.cyan.opacity(0.12))
+            )
+            .overlay(Capsule().strokeBorder(Color.cyan.opacity(0.35)))
+        }
+        .buttonStyle(.plain)
+        .help("打开 AI Agent")
+        .onHover { isHovering = $0 }
     }
 }
 

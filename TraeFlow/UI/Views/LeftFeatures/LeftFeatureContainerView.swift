@@ -16,6 +16,15 @@ struct LeftFeatureContainerView: View {
             mainContentArea
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
+        .contentShape(Rectangle())
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 35)
+                .onEnded { value in
+                    guard abs(value.translation.width) > abs(value.translation.height),
+                          abs(value.translation.width) > 60 else { return }
+                    switchPage(direction: value.translation.width < 0 ? 1 : -1)
+                }
+        )
     }
 
     @ViewBuilder
@@ -30,6 +39,12 @@ struct LeftFeatureContainerView: View {
     @ViewBuilder
     private func mainContent(for feature: LeftFeature) -> some View {
         switch feature.kind {
+        case .appManager:
+            DynamicAppManagerView()
+        case .requirementManager:
+            RequirementManagerView()
+        case .monitorReminders:
+            MonitorRemindersView()
         case .music:
             MusicExpandedView()
         case .shelf:
@@ -75,6 +90,18 @@ struct LeftFeatureContainerView: View {
             } else {
                 webURLInvalidState
             }
+        }
+    }
+
+    private func switchPage(direction: Int) {
+        let features = featureStore.enabledFeatures
+        guard features.count > 1,
+              let currentID = featureStore.expandedActiveFeature?.id,
+              let index = features.firstIndex(where: { $0.id == currentID }) else { return }
+        let nextIndex = min(max(index + direction, 0), features.count - 1)
+        guard nextIndex != index else { return }
+        withAnimation(.spring(response: 0.32, dampingFraction: 0.84)) {
+            featureStore.setExpandedActiveFeature(id: features[nextIndex].id)
         }
     }
 

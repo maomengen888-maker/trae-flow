@@ -2132,7 +2132,7 @@ private struct SettingsPanelContentView: View {
                     .font(.system(size: 12))
                     .foregroundColor(.red)
 
-            case .music, .shelf:
+            case .appManager, .requirementManager, .monitorReminders, .music, .shelf:
                 // 内置功能也支持编辑（图标 / 名称 / 展开尺寸 / 固定）
                 Button("编辑") { editingBuiltinFeature = feature }
                     .buttonStyle(.borderless)
@@ -2193,7 +2193,7 @@ private struct SettingsPanelContentView: View {
             editCustomArea(areaID: areaID)
         case .webURL:
             editingWebURLFeature = feature
-        case .music, .shelf, .newsnow:
+        case .appManager, .requirementManager, .monitorReminders, .music, .shelf, .newsnow:
             editingBuiltinFeature = feature
         case .mineradio:
             editingMineradioFeature = feature
@@ -5078,4 +5078,3 @@ private struct SoundPackEventLine: View {
         .padding(.vertical, 18)
     }
 }
-

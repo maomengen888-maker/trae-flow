@@ -18,6 +18,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Touch the settings store early so the bridge runtime config is on disk
         // before any hook fires.
         _ = AppSettings.shared
+        _ = LeftFeatureStore.shared
 
         // 正常启动时默认回到 Flow Island 形态，避免测试/开发残留把 surfaceMode 设为 floatingPet。
         if !launchConfiguration.isRunningTests {
@@ -27,9 +28,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         if !launchConfiguration.isRunningTests {
             UpdateManager.shared.start()
             UserIdleAutoProtection.shared.start()
-            Task {
-                await TelemetryService.shared.start()
-            }
         }
 
         if launchConfiguration.shouldInstallIntegrations {
@@ -78,16 +76,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
                 self?.startWindowManagerIfNeeded()
                 self?.windowManager?.presentationCoordinator?.requestDockedWindowVisibilityRefresh()
+                LeftFeatureStore.shared.setExpandedActiveFeature(id: LeftFeature.appManagerID)
+                self?.windowManager?.presentationCoordinator?.viewModel.presentCustomExpanded(reason: .boot)
             }
         }
 
         globalShortcutManager.start()
 
-        // 确保 LeftFeatureStore 先完成初始化（含 legacy migration / builtin seeding），
-        // 然后再注入默认自定义区域预设。这样 CustomAreaStore 调用 appendCustomAreaFeature
-        // 时写入的 LeftFeature 不会被 migrateFromLegacy 覆盖。
-        _ = LeftFeatureStore.shared
-        CustomAreaStore.shared.bootstrapBuiltInAreasIfNeeded()
+        // Dynamic 仅展示产品核心三页，不再注入 TRAE 自定义演示入口。
 
         // Spec: 延迟启动 MediaRemote Now Playing 轮询 —— 避免应用启动时
         // `MRMediaRemoteRegisterForNowPlayingNotifications` 的 arm64↔arm64e PAC 崩溃。
@@ -110,17 +106,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
 
-        if !launchConfiguration.isRunningTests {
-            Task {
-                try? await Task.sleep(nanoseconds: 10_000_000_000)
-                await TelemetryService.shared.recordAppLaunch()
-                await TelemetryService.shared.recordIntegrationSnapshot()
-            }
-        }
     }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
-        SettingsWindowController.shared.present()
+        startWindowManagerIfNeeded()
+        LeftFeatureStore.shared.setExpandedActiveFeature(id: LeftFeature.appManagerID)
+        windowManager?.presentationCoordinator?.viewModel.presentCustomExpanded(reason: .click)
+        windowManager?.presentationCoordinator?.requestDockedWindowVisibilityRefresh()
         return true
     }
 
@@ -141,12 +133,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         screenObserver = nil
         UserIdleAutoProtection.shared.stop()
         startupSessionMonitor.stopMonitoring()
-        Task {
-            await TelemetryService.shared.stop()
-        }
     }
     private func ensureSingleInstance() -> Bool {
-        let bundleID = Bundle.main.bundleIdentifier ?? "ai.traeflow.app"
+        let bundleID = Bundle.main.bundleIdentifier ?? "ai.dynamic.app"
         let runningApps = NSWorkspace.shared.runningApplications.filter {
             $0.bundleIdentifier == bundleID
         }

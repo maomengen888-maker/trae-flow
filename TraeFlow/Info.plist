@@ -3,9 +3,9 @@
 <plist version="1.0">
 <dict>
     <key>CFBundleName</key>
-    <string>TRAE FLOW</string>
+    <string>Dynamic</string>
     <key>CFBundleDisplayName</key>
-    <string>TRAE FLOW</string>
+    <string>Dynamic</string>
     <key>CFBundleIdentifier</key>
     <string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
     <key>CFBundleVersion</key>
@@ -15,9 +15,9 @@
     <key>LSUIElement</key>
     <false/>
     <key>NSAppleEventsUsageDescription</key>
-    <string>TRAE FLOW uses Apple Events to focus the matching TRAE / TRAE CN / TRAE SOLO / TRAE SOLO CN window for a session.</string>
+    <string>Dynamic uses Apple Events to open and focus applications you choose.</string>
     <key>NSHumanReadableCopyright</key>
-    <string>Copyright 2026 TRAE FLOW Contributors. All rights reserved.</string>
+    <string>Copyright 2026 Dynamic Contributors. All rights reserved.</string>
     <key>PINGTelemetryDailyEventLimit</key>
     <string>$(TRAE_FLOW_TELEMETRY_DAILY_EVENT_LIMIT)</string>
     <key>PINGTelemetrySLSHost</key>
@@ -32,11 +32,11 @@
     <string>$(TRAE_FLOW_TELEMETRY_SLS_TOPIC)</string>
 
     <key>SUAllowsAutomaticUpdates</key>
-    <true/>
+    <false/>
     <key>SUAutomaticallyUpdate</key>
-    <true/>
+    <false/>
     <key>SUEnableAutomaticChecks</key>
-    <true/>
+    <false/>
     <key>SUFeedURL</key>
     <string>$(SPARKLE_APPCAST_URL)</string>
     <key>SUPublicEDKey</key>

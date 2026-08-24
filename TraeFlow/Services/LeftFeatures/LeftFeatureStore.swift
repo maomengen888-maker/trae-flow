@@ -128,9 +128,7 @@ final class LeftFeatureStore: ObservableObject {
         expandedActiveFeatureID = defaults.string(forKey: Keys.expandedActiveFeatureID)
         migrateFromLegacy()
         syncCustomAreaIconNames()
-        ensureBuiltinAihotFeature()
-        ensureBuiltinNewsNowFeature()
-        ensureBuiltinMineradioFeature()
+        ensureDynamicCoreFeatures()
     }
 
     // MARK: - Loading & Persistence
@@ -184,41 +182,31 @@ final class LeftFeatureStore: ObservableObject {
         // 设置较小的默认展开高度，避免展开时占用过多屏幕空间
         features = [
             LeftFeature(
-                id: LeftFeature.aihotID,
-                kind: .webURL(url: "https://aihot.virxact.com/"),
+                id: LeftFeature.appManagerID,
+                kind: .appManager,
                 isEnabled: true,
                 sortOrder: 0,
-                customDisplayName: "AI 热搜"
+                expandedWidth: 900,
+                expandedHeight: 620,
+                expandedPinned: true
             ),
             LeftFeature(
-                id: LeftFeature.musicID,
-                kind: .music,
+                id: LeftFeature.requirementManagerID,
+                kind: .requirementManager,
                 isEnabled: true,
                 sortOrder: 1,
-                expandedWidth: 670,
-                expandedHeight: 360
+                expandedWidth: 980,
+                expandedHeight: 680,
+                expandedPinned: true
             ),
             LeftFeature(
-                id: LeftFeature.shelfID,
-                kind: .shelf,
+                id: LeftFeature.monitorRemindersID,
+                kind: .monitorReminders,
                 isEnabled: true,
                 sortOrder: 2,
-                expandedHeight: 280
-            ),
-            LeftFeature(
-                id: LeftFeature.newsnowID,
-                kind: .newsnow(baseURL: "https://newsnow.busiyi.world"),
-                isEnabled: false,
-                sortOrder: Self.trailingBuiltinSortOrderBase,
-                expandedHeight: 420
-            ),
-            LeftFeature(
-                id: LeftFeature.mineradioID,
-                kind: .mineradio(pageURL: "https://mineradio.art/"),
-                isEnabled: false,
-                sortOrder: Self.trailingBuiltinSortOrderBase + 1,
-                expandedWidth: 900,
-                expandedHeight: 600
+                expandedWidth: 860,
+                expandedHeight: 600,
+                expandedPinned: true
             )
         ]
 
@@ -283,6 +271,52 @@ final class LeftFeatureStore: ObservableObject {
             features[index].customIconName = iconName
             didChange = true
         }
+        if didChange { persist() }
+    }
+
+    /// Dynamic 1.0 的三个核心模块。首次升级时停用旧功能并固定顺序：
+    /// APP 管理 → 需求管理 → 监控提醒。
+    private func ensureDynamicCoreFeatures() {
+        let migrationKey = "dynamicCoreFeaturesVersion"
+        let targetVersion = 1
+        let coreDefinitions: [(id: String, kind: LeftFeatureKind, order: Int, width: Double, height: Double)] = [
+            (LeftFeature.appManagerID, .appManager, 0, 900, 620),
+            (LeftFeature.requirementManagerID, .requirementManager, 1, 980, 680),
+            (LeftFeature.monitorRemindersID, .monitorReminders, 2, 860, 600)
+        ]
+
+        var didChange = false
+        for definition in coreDefinitions where !features.contains(where: { $0.id == definition.id }) {
+            features.append(LeftFeature(
+                id: definition.id,
+                kind: definition.kind,
+                isEnabled: true,
+                sortOrder: definition.order,
+                expandedWidth: definition.width,
+                expandedHeight: definition.height,
+                expandedPinned: true
+            ))
+            didChange = true
+        }
+
+        if defaults.integer(forKey: migrationKey) < targetVersion {
+            let coreIDs = Set(coreDefinitions.map { $0.id })
+            for index in features.indices {
+                features[index].isEnabled = coreIDs.contains(features[index].id)
+                if let definition = coreDefinitions.first(where: { $0.id == features[index].id }) {
+                    features[index].kind = definition.kind
+                    features[index].sortOrder = definition.order
+                    features[index].expandedWidth = definition.width
+                    features[index].expandedHeight = definition.height
+                    features[index].expandedPinned = true
+                }
+            }
+            compactFeatureID = LeftFeature.appManagerID
+            expandedActiveFeatureID = LeftFeature.appManagerID
+            defaults.set(targetVersion, forKey: migrationKey)
+            didChange = true
+        }
+
         if didChange { persist() }
     }
 
