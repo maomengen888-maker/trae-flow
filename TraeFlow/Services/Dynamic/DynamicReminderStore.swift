@@ -81,7 +81,7 @@ final class DynamicReminderStore: ObservableObject {
     private nonisolated func schedule(_ reminder: DynamicReminder) {
         guard reminder.isEnabled, reminder.fireDate > Date() else { return }
         let content = UNMutableNotificationContent()
-        content.title = "Dynamic 监控提醒"
+        content.title = "摸鱼岛监控提醒"
         content.body = reminder.title
         content.sound = .default
         let interval = max(1, reminder.fireDate.timeIntervalSinceNow)

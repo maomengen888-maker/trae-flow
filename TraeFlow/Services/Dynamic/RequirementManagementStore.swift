@@ -38,6 +38,15 @@ enum RequirementLifecycleStage: String, Codable, CaseIterable, Identifiable {
     }
 
     var index: Int { Self.allCases.firstIndex(of: self) ?? 0 }
+
+    var directoryName: String {
+        switch self {
+        case .prd: return "01-需求PRD"
+        case .prototype: return "02-原型文档"
+        case .acceptance: return "03-测试验收"
+        case .launch: return "04-上线"
+        }
+    }
 }
 
 struct RequirementDocument: Codable, Identifiable, Equatable {
@@ -67,6 +76,8 @@ final class RequirementManagementStore: ObservableObject {
 
     @Published private(set) var requirements: [ManagedRequirement] = []
     @Published var selectedRequirementID: String?
+    @Published private(set) var storageMessage: String?
+    @Published private(set) var storageMessageIsError = false
 
     private static var persistenceURL: URL {
         BridgeRuntimePaths.runtimeDirectoryURL.appendingPathComponent("dynamic-requirements.json")
@@ -81,6 +92,7 @@ final class RequirementManagementStore: ObservableObject {
         if requirements.isEmpty {
             seedInitialRequirement()
         }
+        ensureFolderStructuresForExistingRequirements()
         selectedRequirementID = requirements.first?.id
     }
 
@@ -89,7 +101,8 @@ final class RequirementManagementStore: ObservableObject {
         return requirements.first { $0.id == selectedRequirementID } ?? requirements.first
     }
 
-    func addRequirement(title: String, details: String, priority: String) {
+    @discardableResult
+    func addRequirement(title: String, details: String, priority: String) -> Bool {
         let sequence = (requirements.compactMap { Int($0.code.replacingOccurrences(of: "REQ-", with: "")) }.max() ?? 0) + 1
         let item = ManagedRequirement(
             id: UUID().uuidString,
@@ -103,9 +116,19 @@ final class RequirementManagementStore: ObservableObject {
             createdAt: Date(),
             updatedAt: Date()
         )
+
+        do {
+            let folderURL = try createFolderStructure(for: item)
+            setStorageMessage("已创建需求文件夹：\(folderURL.lastPathComponent)")
+        } catch {
+            setStorageError("需求文件夹创建失败：\(error.localizedDescription)")
+            return false
+        }
+
         requirements.insert(item, at: 0)
         selectedRequirementID = item.id
         persist()
+        return true
     }
 
     func advance(_ requirementID: String) {
@@ -120,21 +143,52 @@ final class RequirementManagementStore: ObservableObject {
         persist()
     }
 
-    func importDocuments(_ sourceURLs: [URL], requirementID: String, stage: RequirementLifecycleStage) {
-        guard let index = requirements.firstIndex(where: { $0.id == requirementID }) else { return }
-        let destinationDirectory = Self.documentsRootURL
-            .appendingPathComponent(requirementID, isDirectory: true)
-            .appendingPathComponent(stage.rawValue, isDirectory: true)
-
+    @discardableResult
+    func prepareRequirementFolder(requirementID: String) -> URL? {
+        guard let requirement = requirements.first(where: { $0.id == requirementID }) else {
+            setStorageError("找不到该需求，无法创建文件夹")
+            return nil
+        }
         do {
-            try FileManager.default.createDirectory(at: destinationDirectory, withIntermediateDirectories: true)
+            let folderURL = try createFolderStructure(for: requirement)
+            return folderURL
         } catch {
+            setStorageError("需求文件夹创建失败：\(error.localizedDescription)")
+            return nil
+        }
+    }
+
+    func importDocuments(_ sourceURLs: [URL], requirementID: String, stage: RequirementLifecycleStage) {
+        guard let index = requirements.firstIndex(where: { $0.id == requirementID }) else {
+            setStorageError("找不到该需求，无法保存文件")
             return
         }
 
+        let requirement = requirements[index]
+        let destinationDirectory: URL
+        do {
+            destinationDirectory = try createFolderStructure(for: requirement)
+                .appendingPathComponent(stage.directoryName, isDirectory: true)
+        } catch {
+            setStorageError("需求文件夹创建失败：\(error.localizedDescription)")
+            return
+        }
+
+        var importedCount = 0
+        var failedNames: [String] = []
+
         for sourceURL in sourceURLs {
-            let destinationName = "\(UUID().uuidString.prefix(8))-\(sourceURL.lastPathComponent)"
-            let destinationURL = destinationDirectory.appendingPathComponent(destinationName)
+            let didAccessSecurityScopedResource = sourceURL.startAccessingSecurityScopedResource()
+            defer {
+                if didAccessSecurityScopedResource {
+                    sourceURL.stopAccessingSecurityScopedResource()
+                }
+            }
+
+            let destinationURL = availableDestinationURL(
+                for: sourceURL.lastPathComponent,
+                in: destinationDirectory
+            )
             do {
                 try FileManager.default.copyItem(at: sourceURL, to: destinationURL)
                 requirements[index].documents.append(RequirementDocument(
@@ -144,16 +198,33 @@ final class RequirementManagementStore: ObservableObject {
                     storedPath: destinationURL.path,
                     uploadedAt: Date()
                 ))
+                importedCount += 1
             } catch {
-                continue
+                failedNames.append(sourceURL.lastPathComponent)
             }
         }
-        requirements[index].updatedAt = Date()
-        persist()
+
+        if importedCount > 0 {
+            requirements[index].updatedAt = Date()
+            persist()
+        }
+
+        if failedNames.isEmpty {
+            setStorageMessage("已将 \(importedCount) 个文件保存到「\(stage.title)」文件夹")
+        } else if importedCount > 0 {
+            setStorageError("已保存 \(importedCount) 个文件，\(failedNames.count) 个文件保存失败")
+        } else {
+            setStorageError("文件保存失败，请检查文件访问权限")
+        }
     }
 
     func openDocument(_ document: RequirementDocument) {
         NSWorkspace.shared.open(URL(fileURLWithPath: document.storedPath))
+    }
+
+    func openRequirementFolder(requirementID: String) {
+        guard let folderURL = prepareRequirementFolder(requirementID: requirementID) else { return }
+        NSWorkspace.shared.open(folderURL)
     }
 
     private func load() {
@@ -176,6 +247,76 @@ final class RequirementManagementStore: ObservableObject {
         } catch {
             NSLog("[Dynamic] 需求数据保存失败: \(error.localizedDescription)")
         }
+    }
+
+    private func ensureFolderStructuresForExistingRequirements() {
+        for requirement in requirements {
+            do {
+                _ = try createFolderStructure(for: requirement)
+            } catch {
+                NSLog("[Dynamic] 需求文件夹创建失败: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    private func createFolderStructure(for requirement: ManagedRequirement) throws -> URL {
+        let requirementDirectory = Self.documentsRootURL.appendingPathComponent(
+            requirementDirectoryName(for: requirement),
+            isDirectory: true
+        )
+        try FileManager.default.createDirectory(
+            at: requirementDirectory,
+            withIntermediateDirectories: true
+        )
+        for stage in RequirementLifecycleStage.allCases {
+            try FileManager.default.createDirectory(
+                at: requirementDirectory.appendingPathComponent(stage.directoryName, isDirectory: true),
+                withIntermediateDirectories: true
+            )
+        }
+        return requirementDirectory
+    }
+
+    private func requirementDirectoryName(for requirement: ManagedRequirement) -> String {
+        let invalidCharacters = CharacterSet(charactersIn: "/:\\?%*|\"<>")
+            .union(.newlines)
+            .union(.controlCharacters)
+        let cleanedTitle = requirement.title
+            .components(separatedBy: invalidCharacters)
+            .joined(separator: "-")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let readableTitle = cleanedTitle.isEmpty ? "未命名需求" : String(cleanedTitle.prefix(48))
+        return "\(requirement.code)-\(readableTitle)-\(requirement.id.prefix(8))"
+    }
+
+    private func availableDestinationURL(for fileName: String, in directory: URL) -> URL {
+        let fileManager = FileManager.default
+        let originalURL = directory.appendingPathComponent(fileName)
+        guard fileManager.fileExists(atPath: originalURL.path) else { return originalURL }
+
+        let fileExtension = originalURL.pathExtension
+        let baseName = originalURL.deletingPathExtension().lastPathComponent
+        var copyNumber = 2
+        while true {
+            let candidateName = fileExtension.isEmpty
+                ? "\(baseName)-\(copyNumber)"
+                : "\(baseName)-\(copyNumber).\(fileExtension)"
+            let candidateURL = directory.appendingPathComponent(candidateName)
+            if !fileManager.fileExists(atPath: candidateURL.path) {
+                return candidateURL
+            }
+            copyNumber += 1
+        }
+    }
+
+    private func setStorageMessage(_ message: String) {
+        storageMessage = message
+        storageMessageIsError = false
+    }
+
+    private func setStorageError(_ message: String) {
+        storageMessage = message
+        storageMessageIsError = true
     }
 
     private func seedInitialRequirement() {

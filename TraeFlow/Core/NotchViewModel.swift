@@ -188,6 +188,12 @@ class NotchViewModel: ObservableObject {
         panelSize(for: .docked)
     }
 
+    /// 展开内容外围还有圆角与命中区域留白，因此内容宽度不能只减去很小的屏幕边距。
+    /// 这里预留足够的左右安全区，避免顶栏末尾入口落到屏幕边缘或被窗口外壳裁切。
+    private var maximumDockedContentWidth: CGFloat {
+        max(320, screenRect.width - 176)
+    }
+
     var detachedSize: CGSize {
         switch detachedDisplayMode {
         case .compact:
@@ -223,7 +229,7 @@ class NotchViewModel: ObservableObject {
             switch style {
             case .docked:
                 return CGSize(
-                    width: min(screenRect.width - 64, CGFloat(featureWidth)),
+                    width: min(maximumDockedContentWidth, CGFloat(featureWidth)),
                     height: resolvedMaxHeight
                 )
             case .detached:
@@ -304,7 +310,7 @@ class NotchViewModel: ObservableObject {
     /// （width 470–1600，height 200–1000），并叠加屏幕可用尺寸上限。
     func clampedResizeSize(_ size: CGSize) -> CGSize {
         let minWidth: CGFloat = 470
-        let maxWidth: CGFloat = min(screenRect.width - 64, 1600)
+        let maxWidth: CGFloat = min(maximumDockedContentWidth, 1600)
         let effectiveMinWidth = min(minWidth, maxWidth)
         let minHeight: CGFloat = 200
         let maxHeight: CGFloat = min(screenRect.height - 120, 1000)
@@ -1017,6 +1023,15 @@ class NotchViewModel: ObservableObject {
         // “固定显示 Flow 岛”或当前功能设置「展开即固定」时，保持面板展开直到用户取消固定。
         // per-feature 的 expandedPinned 仅对当前激活功能生效，切换到其他功能时自动跟随全局配置。
         guard !currentPanelPinned else { return }
+        closeImmediately()
+    }
+
+    /// 启动系统音乐等外部 App 时必须强制收起；否则 Dynamic 的高层级窗口会挡住目标 App。
+    func dismissForExternalApplicationLaunch() {
+        closeImmediately()
+    }
+
+    private func closeImmediately() {
         status = .closed
         currentChatSession = nil
         isAIAgentPresented = false

@@ -45,8 +45,10 @@ struct LeftFeatureContainerView: View {
             RequirementManagerView()
         case .monitorReminders:
             MonitorRemindersView()
+        case .douyin:
+            DouyinBrowserView()
         case .music:
-            MusicExpandedView()
+            AppleMusicEmbeddedView()
         case .shelf:
             ShelfExpandedView()
         case .customArea(let areaID):

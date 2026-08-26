@@ -25,6 +25,7 @@ Package.resolved
 # Misc
 *.log
 trae-work-docs/
+docs/wechat-assets/*-full.jpeg
 
 # LLVM profiling output
 default.profraw

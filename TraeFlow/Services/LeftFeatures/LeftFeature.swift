@@ -52,6 +52,7 @@ enum LeftFeatureKind: Codable, Equatable, Hashable {
     case appManager
     case requirementManager
     case monitorReminders
+    case douyin
     case music
     case shelf
     case customArea(areaID: String)
@@ -170,6 +171,7 @@ extension LeftFeature {
     static let appManagerID = "dynamic-app-manager"
     static let requirementManagerID = "dynamic-requirement-manager"
     static let monitorRemindersID = "dynamic-monitor-reminders"
+    static let douyinID = "dynamic-douyin"
 
     /// 系统图标名（SF Symbols）。优先使用 `customIconName`（非空时覆盖所有 kind 默认图标）。
     var systemImage: String {
@@ -183,6 +185,8 @@ extension LeftFeature {
             return "point.3.connected.trianglepath.dotted"
         case .monitorReminders:
             return "waveform.path.ecg"
+        case .douyin:
+            return "play.rectangle.fill"
         case .music:
             return "music.note"
         case .shelf:
@@ -215,6 +219,8 @@ extension LeftFeature {
             return "需求管理"
         case .monitorReminders:
             return "监控提醒"
+        case .douyin:
+            return "抖音"
         case .music:
             return "音乐"
         case .shelf:

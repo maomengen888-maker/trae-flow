@@ -18,6 +18,9 @@ struct LeftFeatureSwitcherBar: View {
     @ObservedObject private var store = LeftFeatureStore.shared
     var onSelect: ((String) -> Void)?
     var showAllUnselected: Bool = false
+    /// 为空时展示全部已启用功能；传入集合时只展示指定入口。
+    /// 用于有实体刘海的 Mac 将“音乐”拆到刘海右侧。
+    var featureIDs: Set<String>? = nil
 
     /// 当前被拖拽的 feature ID（用于半透明显示）
     @State private var draggingFeatureID: String?
@@ -26,11 +29,16 @@ struct LeftFeatureSwitcherBar: View {
     @State private var dropTargetID: String?
     @State private var dropBefore: Bool = false
 
+    private var displayedFeatures: [LeftFeature] {
+        guard let featureIDs else { return store.enabledFeatures }
+        return store.enabledFeatures.filter { featureIDs.contains($0.id) }
+    }
+
     var body: some View {
-        if store.enabledFeatures.count >= 1 {
+        if !displayedFeatures.isEmpty {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 4) {
-                    ForEach(store.enabledFeatures) { feature in
+                    ForEach(displayedFeatures) { feature in
                         FeatureSwitcherButton(
                             feature: feature,
                             onSelect: onSelect,
@@ -60,8 +68,9 @@ struct LeftFeatureSwitcherBar: View {
                 }
                 .padding(.vertical, 4)
                 .padding(.leading, 4)
-                .animation(.spring(response: 0.3, dampingFraction: 0.7), value: store.enabledFeatures.map(\.id))
+                .animation(.spring(response: 0.3, dampingFraction: 0.7), value: displayedFeatures.map(\.id))
             }
+            .fixedSize(horizontal: true, vertical: false)
         }
     }
 

@@ -9,6 +9,130 @@ import WebKit
 /// 向紧凑态 Flow 岛推送提示文本，由 `CustomAreaHintStore` 接收并自动超时清除。
 /// Spec: 支持双内容源（本地自定义区域目录 / 远程 URL），按源选择 `loadFileURL` 或 `load(URLRequest)`。
 struct CustomAreaWebView: NSViewRepresentable {
+    /// 抖音网页版使用桌面 Chrome 标识，避免被站点误判为移动端后只展示“打开 App”。
+    static let douyinDesktopUserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+    /// 抖音悬浮小窗使用 iPhone Safari 标识；抖音移动布局仍由 www.douyin.com 提供。
+    static let douyinMobileUserAgent = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1"
+    /// 在文档加载最早阶段固定手机 viewport，并在直播/video 节点出现后滚动到画面中心。
+    static let douyinMobileLayoutScript = """
+    (function () {
+        var dynamicWheelLocked = false;
+        var dynamicUserNavigated = false;
+
+        function ensureViewport() {
+            var viewport = document.querySelector('meta[name="viewport"]');
+            if (!viewport) {
+                viewport = document.createElement('meta');
+                viewport.name = 'viewport';
+                (document.head || document.documentElement).appendChild(viewport);
+            }
+            viewport.content = 'width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover';
+        }
+
+        function applyMobileLayout() {
+            ensureViewport();
+            document.documentElement.style.setProperty('width', '100%', 'important');
+            document.documentElement.style.setProperty('max-width', '100vw', 'important');
+            document.documentElement.style.setProperty('overflow-x', 'hidden', 'important');
+            if (document.body) {
+                document.body.style.setProperty('width', '100%', 'important');
+                document.body.style.setProperty('max-width', '100vw', 'important');
+                document.body.style.setProperty('min-width', '0', 'important');
+                document.body.style.setProperty('overflow-x', 'hidden', 'important');
+                document.body.style.setProperty('background', '#000', 'important');
+            }
+            var videos = Array.from(document.querySelectorAll('video'));
+            var bestVideo = null;
+            var bestScore = -1;
+            videos.forEach(function (video) {
+                video.style.setProperty('max-width', '100vw', 'important');
+                video.style.setProperty('max-height', '100vh', 'important');
+                video.style.setProperty('object-fit', 'contain', 'important');
+                var rect = video.getBoundingClientRect();
+                var visibleWidth = Math.max(0, Math.min(rect.right, innerWidth) - Math.max(rect.left, 0));
+                var visibleHeight = Math.max(0, Math.min(rect.bottom, innerHeight) - Math.max(rect.top, 0));
+                var score = (visibleWidth * visibleHeight) + (video.paused ? 0 : 1000000000);
+                if (score > bestScore) { bestScore = score; bestVideo = video; }
+            });
+            if (!dynamicUserNavigated && bestVideo && !bestVideo.dataset.dynamicMobileCentered) {
+                bestVideo.dataset.dynamicMobileCentered = '1';
+                setTimeout(function () {
+                    bestVideo.scrollIntoView({ block: 'center', inline: 'center', behavior: 'auto' });
+                }, 120);
+            }
+        }
+
+        function visibleVideos() {
+            return Array.from(document.querySelectorAll('video')).filter(function (video) {
+                var rect = video.getBoundingClientRect();
+                return rect.width > 40 && rect.height > 80;
+            });
+        }
+
+        function currentVideoIndex(videos) {
+            var centerY = innerHeight / 2;
+            var bestIndex = 0;
+            var bestDistance = Infinity;
+            videos.forEach(function (video, index) {
+                var rect = video.getBoundingClientRect();
+                var distance = Math.abs((rect.top + rect.bottom) / 2 - centerY);
+                if (!video.paused) { distance -= 100000; }
+                if (distance < bestDistance) {
+                    bestDistance = distance;
+                    bestIndex = index;
+                }
+            });
+            return bestIndex;
+        }
+
+        function swipePage(direction) {
+            var target = document.elementFromPoint(innerWidth / 2, innerHeight / 2) || document.body;
+            var startY = direction > 0 ? innerHeight * 0.76 : innerHeight * 0.24;
+            var endY = direction > 0 ? innerHeight * 0.24 : innerHeight * 0.76;
+            try {
+                if (typeof Touch === 'function' && typeof TouchEvent === 'function') {
+                    var startTouch = new Touch({ identifier: Date.now(), target: target, clientX: innerWidth / 2, clientY: startY });
+                    target.dispatchEvent(new TouchEvent('touchstart', { touches: [startTouch], targetTouches: [startTouch], changedTouches: [startTouch], bubbles: true, cancelable: true }));
+                    var endTouch = new Touch({ identifier: startTouch.identifier, target: target, clientX: innerWidth / 2, clientY: endY });
+                    target.dispatchEvent(new TouchEvent('touchmove', { touches: [endTouch], targetTouches: [endTouch], changedTouches: [endTouch], bubbles: true, cancelable: true }));
+                    target.dispatchEvent(new TouchEvent('touchend', { touches: [], targetTouches: [], changedTouches: [endTouch], bubbles: true, cancelable: true }));
+                }
+            } catch (_) {}
+            var key = direction > 0 ? 'ArrowDown' : 'ArrowUp';
+            target.dispatchEvent(new KeyboardEvent('keydown', { key: key, code: key, bubbles: true }));
+            target.dispatchEvent(new KeyboardEvent('keyup', { key: key, code: key, bubbles: true }));
+        }
+
+        function moveByVideo(direction) {
+            var videos = visibleVideos();
+            if (videos.length > 1) {
+                var index = currentVideoIndex(videos);
+                var nextIndex = Math.max(0, Math.min(videos.length - 1, index + direction));
+                if (nextIndex !== index) {
+                    videos[nextIndex].scrollIntoView({ block: 'center', inline: 'center', behavior: 'smooth' });
+                    setTimeout(function () { videos[nextIndex].play().catch(function () {}); }, 240);
+                    return;
+                }
+            }
+            swipePage(direction);
+        }
+
+        window.addEventListener('wheel', function (event) {
+            if (Math.abs(event.deltaY) < 12 || dynamicWheelLocked) { return; }
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            dynamicUserNavigated = true;
+            dynamicWheelLocked = true;
+            moveByVideo(event.deltaY > 0 ? 1 : -1);
+            setTimeout(function () { dynamicWheelLocked = false; }, 620);
+        }, { passive: false, capture: true });
+
+        ensureViewport();
+        document.addEventListener('DOMContentLoaded', applyMobileLayout, { once: true });
+        new MutationObserver(applyMobileLayout).observe(document.documentElement, { childList: true, subtree: true });
+        setTimeout(applyMobileLayout, 500);
+    })();
+    """
     /// JS Bridge 消息处理器名称 —— HTML 端通过 `window.webkit.messageHandlers.traeFlowHint` 调用
     static let hintMessageHandlerName = "traeFlowHint"
     /// JS Bridge 系统指标消息处理器 —— HTML 端通过 `window.webkit.messageHandlers.traeFlowMetrics` 请求指标
@@ -256,6 +380,8 @@ struct CustomAreaWebView: NSViewRepresentable {
         case remoteURL(URL)
         /// Dynamic 内嵌 Dify Agent（远程 URL + 专属未来科技主题）
         case dynamicAgent(URL)
+        /// Dynamic 内嵌抖音网页版（共享 Cookie、允许媒体播放与站内登录跳转）
+        case douyin(URL, prefersMobileLayout: Bool)
         /// Mineradio 网页（注入 Bridge 兼容层 + JSC 引擎）
         /// Spec: mineradio-bridge-compat-layer
         case mineradio(URL)
@@ -272,7 +398,7 @@ struct CustomAreaWebView: NSViewRepresentable {
         var allowsNetworkAccess: Bool {
             switch self {
             case .localArea(let area): return area.allowsNetworkAccess
-            case .remoteURL, .dynamicAgent: return true
+            case .remoteURL, .dynamicAgent, .douyin: return true
             case .mineradio: return true
             }
         }
@@ -299,6 +425,16 @@ struct CustomAreaWebView: NSViewRepresentable {
             if case .dynamicAgent = self { return true }
             return false
         }
+
+        var isDouyin: Bool {
+            if case .douyin = self { return true }
+            return false
+        }
+
+        var prefersDouyinMobileLayout: Bool {
+            if case .douyin(_, let prefersMobileLayout) = self { return prefersMobileLayout }
+            return false
+        }
     }
 
     let source: ContentSource
@@ -306,10 +442,21 @@ struct CustomAreaWebView: NSViewRepresentable {
     /// 开启后 SwiftUI 移除宿主视图时 WKWebView 由 `CustomAreaWebViewCache` 持有强引用继续存活；
     /// 下次 `makeNSView` 从缓存取回同一实例并重新绑定 Coordinator（message handler / delegate）。
     let keepsAlive: Bool
+    /// 远程页面允许在当前 WebView 内跨域导航的域名后缀（例如 Apple 登录域名）。
+    let allowedRemoteDomains: [String]
+    /// 远程媒体站点允许无额外点击继续播放音频。
+    let enablesRemoteMediaPlayback: Bool
 
-    init(source: ContentSource, keepsAlive: Bool = false) {
+    init(
+        source: ContentSource,
+        keepsAlive: Bool = false,
+        allowedRemoteDomains: [String] = [],
+        enablesRemoteMediaPlayback: Bool = false
+    ) {
         self.source = source
         self.keepsAlive = keepsAlive
+        self.allowedRemoteDomains = allowedRemoteDomains
+        self.enablesRemoteMediaPlayback = enablesRemoteMediaPlayback
     }
 
     /// Spec: 缓存复用 —— `.remoteURL` / `.mineradio` 源 + `keepsAlive == true` 时查缓存。
@@ -320,6 +467,7 @@ struct CustomAreaWebView: NSViewRepresentable {
         switch source {
         case .remoteURL(let url): return url
         case .dynamicAgent(let url): return url
+        case .douyin(let url, _): return url
         case .mineradio(let url): return url
         case .localArea: return nil
         }
@@ -352,6 +500,26 @@ struct CustomAreaWebView: NSViewRepresentable {
             // 桌面 Chrome UA（避免 mineradio.art 检测为移动端）
             configuration.applicationNameForUserAgent = "Chrome/124.0.0.0"
             // 允许自动播放媒体（mineradio 是音乐播放器）
+            configuration.mediaTypesRequiringUserActionForPlayback = []
+        }
+
+        if source.isDouyin {
+            configuration.websiteDataStore = WKWebsiteDataStore.default()
+            configuration.applicationNameForUserAgent = source.prefersDouyinMobileLayout
+                ? "Mobile/15E148 Safari/604.1"
+                : "Chrome/131.0.0.0"
+            configuration.mediaTypesRequiringUserActionForPlayback = []
+            if source.prefersDouyinMobileLayout {
+                configuration.userContentController.addUserScript(WKUserScript(
+                    source: Self.douyinMobileLayoutScript,
+                    injectionTime: .atDocumentStart,
+                    forMainFrameOnly: true
+                ))
+            }
+        }
+
+        if source.isRemoteSource, enablesRemoteMediaPlayback {
+            configuration.websiteDataStore = WKWebsiteDataStore.default()
             configuration.mediaTypesRequiringUserActionForPlayback = []
         }
 
@@ -418,6 +586,10 @@ struct CustomAreaWebView: NSViewRepresentable {
         // Spec: mineradio 桌面 Chrome UA
         if source.isMineradio {
             webView.customUserAgent = MineradioBridgeUserScript.desktopChromeUserAgent
+        } else if source.isDouyin {
+            webView.customUserAgent = source.prefersDouyinMobileLayout
+                ? Self.douyinMobileUserAgent
+                : Self.douyinDesktopUserAgent
         }
 
         // Spec: 禁用内置缩放、强制可访问性
@@ -432,6 +604,7 @@ struct CustomAreaWebView: NSViewRepresentable {
         // Spec: 同步保活标记与缓存键 —— dismantleNSView 据此决定是否移入离屏窗口
         context.coordinator.keepsAlive = keepsAlive
         context.coordinator.cachedURLString = cachedURL()?.absoluteString
+        context.coordinator.allowedRemoteDomains = allowedRemoteDomains
         // 同步源类型 —— decidePolicyFor 据此区分跳转策略：
         // - `.remoteURL`：同 host 在 WebView 内导航，不同 host 转系统浏览器
         // - `.mineradio`：所有 http/https 主框架导航在 WebView 内（允许跨 host）
@@ -439,12 +612,19 @@ struct CustomAreaWebView: NSViewRepresentable {
         if source.isRemoteSource {
             context.coordinator.isRemoteSource = true
             context.coordinator.isMineradioSource = false
+            context.coordinator.isDouyinSource = false
+        } else if source.isDouyin {
+            context.coordinator.isRemoteSource = false
+            context.coordinator.isMineradioSource = false
+            context.coordinator.isDouyinSource = true
         } else if source.isMineradio {
             context.coordinator.isRemoteSource = false
             context.coordinator.isMineradioSource = true
+            context.coordinator.isDouyinSource = false
         } else {
             context.coordinator.isRemoteSource = false
             context.coordinator.isMineradioSource = false
+            context.coordinator.isDouyinSource = false
         }
 
         // Spec: mineradio-bridge-compat-layer —— 绑定 Coordinator
@@ -513,18 +693,26 @@ struct CustomAreaWebView: NSViewRepresentable {
         // Spec: 同步保活标记与缓存键 —— dismantleNSView 据此决定是否移入离屏窗口
         context.coordinator.keepsAlive = keepsAlive
         context.coordinator.cachedURLString = cachedURL()?.absoluteString
+        context.coordinator.allowedRemoteDomains = allowedRemoteDomains
         if source.isRemoteSource {
             context.coordinator.isRemoteSource = true
             context.coordinator.isMineradioSource = false
+            context.coordinator.isDouyinSource = false
+        } else if source.isDouyin {
+            context.coordinator.isRemoteSource = false
+            context.coordinator.isMineradioSource = false
+            context.coordinator.isDouyinSource = true
         } else if source.isMineradio {
             context.coordinator.isRemoteSource = false
             context.coordinator.isMineradioSource = true
+            context.coordinator.isDouyinSource = false
             // Spec: mineradio-bridge-compat-layer —— 重新 attach Coordinator
             //（attach 只更新 webView 引用 + 刷新登录态，不重置页面状态）
             MineradioBridgeCoordinator.shared.attach(to: webView)
         } else {
             context.coordinator.isRemoteSource = false
             context.coordinator.isMineradioSource = false
+            context.coordinator.isDouyinSource = false
         }
     }
 
@@ -552,6 +740,15 @@ struct CustomAreaWebView: NSViewRepresentable {
                 context.coordinator.lastAreaID = nil
                 context.coordinator.lastEntryPointURL = nil
             }
+        case .douyin(let url, _):
+            if webView.url == nil {
+                loadArea(into: webView, context: context)
+            } else {
+                // 抖音会在推荐流、登录和详情页间改写 URL；复用 WebView 时保留当前页面与滚动位置。
+                context.coordinator.lastRemoteURLString = url.absoluteString
+                context.coordinator.lastAreaID = nil
+                context.coordinator.lastEntryPointURL = nil
+            }
         case .mineradio(let url):
             if webView.url?.absoluteString != url.absoluteString {
                 loadArea(into: webView, context: context)
@@ -571,16 +768,24 @@ struct CustomAreaWebView: NSViewRepresentable {
         // Spec: 同步保活标记与缓存键 —— dismantleNSView 据此决定是否移入离屏窗口
         context.coordinator.keepsAlive = keepsAlive
         context.coordinator.cachedURLString = cachedURL()?.absoluteString
+        context.coordinator.allowedRemoteDomains = allowedRemoteDomains
         // 同步源类型 —— decidePolicyFor 据此区分跳转策略
         if source.isRemoteSource {
             context.coordinator.isRemoteSource = true
             context.coordinator.isMineradioSource = false
+            context.coordinator.isDouyinSource = false
+        } else if source.isDouyin {
+            context.coordinator.isRemoteSource = false
+            context.coordinator.isMineradioSource = false
+            context.coordinator.isDouyinSource = true
         } else if source.isMineradio {
             context.coordinator.isRemoteSource = false
             context.coordinator.isMineradioSource = true
+            context.coordinator.isDouyinSource = false
         } else {
             context.coordinator.isRemoteSource = false
             context.coordinator.isMineradioSource = false
+            context.coordinator.isDouyinSource = false
         }
 
         // 仅当源标识或入口 URL 变化时重新加载
@@ -602,6 +807,12 @@ struct CustomAreaWebView: NSViewRepresentable {
         case .dynamicAgent(let url):
             let urlString = url.absoluteString
             let needsReload = context.coordinator.lastRemoteURLString != urlString
+                || context.coordinator.lastAreaID != nil
+            if needsReload {
+                loadArea(into: webView, context: context)
+            }
+        case .douyin(let url, _):
+            let needsReload = context.coordinator.lastRemoteURLString != url.absoluteString
                 || context.coordinator.lastAreaID != nil
             if needsReload {
                 loadArea(into: webView, context: context)
@@ -633,6 +844,11 @@ struct CustomAreaWebView: NSViewRepresentable {
             context.coordinator.lastEntryPointURL = nil
             context.coordinator.lastRemoteURLString = url.absoluteString
         case .dynamicAgent(let url):
+            webView.load(URLRequest(url: url))
+            context.coordinator.lastAreaID = nil
+            context.coordinator.lastEntryPointURL = nil
+            context.coordinator.lastRemoteURLString = url.absoluteString
+        case .douyin(let url, _):
             webView.load(URLRequest(url: url))
             context.coordinator.lastAreaID = nil
             context.coordinator.lastEntryPointURL = nil
@@ -684,6 +900,10 @@ struct CustomAreaWebView: NSViewRepresentable {
         ///（mineradio.art 可能跳转 OAuth 回调或其他 host）。
         /// Spec: mineradio-bridge-compat-layer
         var isMineradioSource: Bool = false
+        /// 当前内容源是否为抖音 —— 允许抖音主站、账号与媒体域名在当前窗口内完成跳转。
+        var isDouyinSource: Bool = false
+        /// 远程页面被允许留在当前 WebView 内的跨域域名后缀。
+        var allowedRemoteDomains: [String] = []
         /// Spec: 保活标记 —— `dismantleNSView` 据此决定是否将 WebView 移入离屏窗口。
         /// 在 makeNSView / updateNSView 中由 keepsAlive 同步。
         var keepsAlive: Bool = false
@@ -735,9 +955,16 @@ struct CustomAreaWebView: NSViewRepresentable {
                     if isMineradioSource {
                         // mineradio 源：跨 host 主框架导航一律放行（OAuth 回调 / 第三方登录可能跳转其他 host）
                         decisionHandler(.allow)
+                    } else if isDouyinSource {
+                        if isAllowedDouyinHost(url.host) {
+                            decisionHandler(.allow)
+                        } else {
+                            NSWorkspace.shared.open(url)
+                            decisionHandler(.cancel)
+                        }
                     } else if isRemoteSource {
-                        // 远程 URL 源：同 host 在 WebView 内导航，不同 host 转系统浏览器
-                        if isSameHost(currentURL, url) {
+                        // 普通远程页面仅允许同 host；明确配置的账号/媒体域名也留在弹窗内。
+                        if isSameHost(currentURL, url) || isAllowedRemoteHost(url.host) {
                             decisionHandler(.allow)
                         } else {
                             NSWorkspace.shared.open(url)
@@ -771,6 +998,20 @@ struct CustomAreaWebView: NSViewRepresentable {
             return h1 == h2
         }
 
+        private func isAllowedRemoteHost(_ host: String?) -> Bool {
+            guard let host = host?.lowercased() else { return false }
+            return allowedRemoteDomains.contains { domain in
+                let normalized = domain.lowercased()
+                return host == normalized || host.hasSuffix(".\(normalized)")
+            }
+        }
+
+        private func isAllowedDouyinHost(_ host: String?) -> Bool {
+            guard let host = host?.lowercased() else { return false }
+            let allowedDomains = ["douyin.com", "bytedance.com", "byteimg.com", "douyinvod.com"]
+            return allowedDomains.contains { host == $0 || host.hasSuffix(".\($0)") }
+        }
+
         /// Spec: 阻止新窗口打开
         func webView(
             _ webView: WKWebView,
@@ -778,7 +1019,16 @@ struct CustomAreaWebView: NSViewRepresentable {
             for navigationAction: WKNavigationAction,
             windowFeatures: WKWindowFeatures
         ) -> WKWebView? {
-            nil
+            if isDouyinSource,
+               let url = navigationAction.request.url,
+               isAllowedDouyinHost(url.host) {
+                webView.load(navigationAction.request)
+            } else if isRemoteSource,
+                      let url = navigationAction.request.url,
+                      isSameHost(webView.url, url) || isAllowedRemoteHost(url.host) {
+                webView.load(navigationAction.request)
+            }
+            return nil
         }
 
         /// Spec: 响应网页 `<input type="file">` 点击 —— 默认 WKUIDelegate 不实现此方法时

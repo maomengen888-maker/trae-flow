@@ -88,7 +88,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         globalShortcutManager.start()
 
-        // Dynamic 仅展示产品核心三页，不再注入 TRAE 自定义演示入口。
+        // Dynamic 仅展示产品核心五页，不再注入 TRAE 自定义演示入口。
 
         // Spec: 延迟启动 MediaRemote Now Playing 轮询 —— 避免应用启动时
         // `MRMediaRemoteRegisterForNowPlayingNotifications` 的 arm64↔arm64e PAC 崩溃。

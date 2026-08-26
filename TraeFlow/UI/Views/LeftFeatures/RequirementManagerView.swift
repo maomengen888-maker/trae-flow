@@ -8,6 +8,7 @@ struct RequirementManagerView: View {
     @State private var newTitle = ""
     @State private var newDetails = ""
     @State private var newPriority = "中优先级"
+    @State private var isChoosingDocuments = false
 
     var body: some View {
         HStack(spacing: 14) {
@@ -133,11 +134,21 @@ struct RequirementManagerView: View {
                             .foregroundStyle(.secondary)
                     }
                     Spacer()
-                    Button("上传文档") {
+                    Button {
+                        store.openRequirementFolder(requirementID: requirement.id)
+                    } label: {
+                        Label("打开文件夹", systemImage: "folder")
+                    }
+                    .buttonStyle(.bordered)
+
+                    Button {
                         chooseDocuments(for: requirement, stage: selectedStage)
+                    } label: {
+                        Label(isChoosingDocuments ? "等待选择…" : "上传文档", systemImage: "arrow.up.doc")
                     }
                     .buttonStyle(.bordered)
                     .tint(.cyan)
+                    .disabled(isChoosingDocuments)
 
                     if selectedStage == requirement.currentStage, !requirement.isLaunched {
                         Button(requirement.currentStage == .launch ? "确认上线" : "完成本阶段") {
@@ -147,6 +158,18 @@ struct RequirementManagerView: View {
                         .buttonStyle(.borderedProminent)
                         .tint(.cyan)
                     }
+                }
+
+                if let storageMessage = store.storageMessage {
+                    Label(
+                        storageMessage,
+                        systemImage: store.storageMessageIsError
+                            ? "exclamationmark.triangle.fill"
+                            : "checkmark.circle.fill"
+                    )
+                    .font(.system(size: 10))
+                    .foregroundStyle(store.storageMessageIsError ? Color.orange : Color.green)
+                    .lineLimit(2)
                 }
 
                 let documents = requirement.documents.filter { $0.stage == selectedStage }
@@ -254,12 +277,13 @@ struct RequirementManagerView: View {
                 Spacer()
                 Button("取消") { isAddingRequirement = false }
                 Button("创建并进入 PRD") {
-                    store.addRequirement(title: newTitle, details: newDetails, priority: newPriority)
-                    selectedStage = .prd
-                    newTitle = ""
-                    newDetails = ""
-                    newPriority = "中优先级"
-                    isAddingRequirement = false
+                    if store.addRequirement(title: newTitle, details: newDetails, priority: newPriority) {
+                        selectedStage = .prd
+                        newTitle = ""
+                        newDetails = ""
+                        newPriority = "中优先级"
+                        isAddingRequirement = false
+                    }
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(newTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
@@ -270,13 +294,27 @@ struct RequirementManagerView: View {
     }
 
     private func chooseDocuments(for requirement: ManagedRequirement, stage: RequirementLifecycleStage) {
+        guard !isChoosingDocuments,
+              store.prepareRequirementFolder(requirementID: requirement.id) != nil else { return }
+
         let panel = NSOpenPanel()
         panel.canChooseFiles = true
         panel.canChooseDirectories = false
         panel.allowsMultipleSelection = true
         panel.prompt = "上传"
-        guard panel.runModal() == .OK else { return }
-        store.importDocuments(panel.urls, requirementID: requirement.id, stage: stage)
+        panel.message = "选择要保存到「\(requirement.title) / \(stage.title)」的文件"
+        panel.level = NSWindow.Level(rawValue: 200)
+        isChoosingDocuments = true
+        NSApp.activate(ignoringOtherApps: true)
+
+        // Dynamic 主窗口层级较高，使用非阻塞式选择器避免弹窗被压在后面造成“卡死”错觉。
+        panel.begin { response in
+            Task { @MainActor in
+                isChoosingDocuments = false
+                guard response == .OK else { return }
+                store.importDocuments(panel.urls, requirementID: requirement.id, stage: stage)
+            }
+        }
     }
 
     private var dynamicBackground: some View {

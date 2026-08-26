@@ -909,7 +909,7 @@ struct NotchView: View {
         switch feature.kind {
         case .music:
             MusicCompactView()
-        case .appManager, .requirementManager, .monitorReminders, .shelf, .newsnow, .webURL:
+        case .appManager, .requirementManager, .monitorReminders, .douyin, .shelf, .newsnow, .webURL:
             // 内置功能紧凑态仅显示图标
             FeatureIconView(feature: feature, size: 14)
                 .frame(width: 24, height: 24)
@@ -978,45 +978,85 @@ struct NotchView: View {
 
     @ViewBuilder
     private var openedHeaderContent: some View {
-        HStack(spacing: 8) {
-            // 展开态左上角功能切换栏：自定义内容展开时 & 任务列表展开时都显示，
-            // 允许在这两种视图间通过点击功能图标快速切换。
-            // 任务列表视图中所有图标显示为未选中态，点击后切到对应功能面板。
-            if viewModel.contentType == .customExpanded || viewModel.contentType == .instances {
+        Group {
+            if viewModel.hasPhysicalNotch {
+                physicalNotchAwareHeader
+            } else {
+                standardOpenedHeader
+            }
+        }
+        .padding(.horizontal, 12)
+        .frame(maxWidth: .infinity)
+    }
+
+    /// 实体刘海屏：前四个入口放在刘海左侧，音乐单独放在右侧。
+    /// 46pt 的右侧留白使音乐中心与 APP 网格中的“词典”列基本对齐。
+    private var physicalNotchAwareHeader: some View {
+        ZStack(alignment: .leading) {
+            if showsOpenedFeatureSwitcher {
                 LeftFeatureSwitcherBar(
-                    onSelect: { _ in
-                        viewModel.isAIAgentPresented = false
-                        viewModel.openedSizeOverride = nil
-                        viewModel.presentCustomExpanded(reason: .click)
-                    },
-                    showAllUnselected: viewModel.isAIAgentPresented || viewModel.contentType == .instances
+                    onSelect: handleOpenedFeatureSelection,
+                    showAllUnselected: viewModel.isAIAgentPresented || viewModel.contentType == .instances,
+                    featureIDs: Set([
+                        LeftFeature.appManagerID,
+                        LeftFeature.requirementManagerID,
+                        LeftFeature.monitorRemindersID,
+                        LeftFeature.douyinID
+                    ])
                 )
+
+                LeftFeatureSwitcherBar(
+                    onSelect: handleOpenedFeatureSelection,
+                    showAllUnselected: viewModel.isAIAgentPresented || viewModel.contentType == .instances,
+                    featureIDs: Set([LeftFeature.musicID])
+                )
+                .offset(x: physicalNotchMusicLeadingOffset)
             }
 
-            Spacer()
-
-            // 展开态右上角提供 AI Agent 入口与常用控制。
-            HStack(spacing: 8) {
+            HStack {
+                Spacer(minLength: 0)
                 DynamicAIAgentButton(
                     isActive: viewModel.isAIAgentPresented,
                     action: toggleAIAgent
                 )
-
-                NotchSoundToggleButton(
-                    isOn: settings.soundEnabled,
-                    action: { AppSettings.soundEnabled.toggle() }
-                )
-
-                NotchSettingsButton(
-                    hasUnseenUpdate: updateManager.hasUnseenUpdate,
-                    action: openSettingsWindow
-                )
+                .fixedSize()
             }
-            .fixedSize()
-            .layoutPriority(1)
         }
-        .padding(.horizontal, 12)
         .frame(maxWidth: .infinity)
+    }
+
+    private var standardOpenedHeader: some View {
+        HStack(spacing: 8) {
+            if showsOpenedFeatureSwitcher {
+                LeftFeatureSwitcherBar(
+                    onSelect: handleOpenedFeatureSelection,
+                    showAllUnselected: viewModel.isAIAgentPresented || viewModel.contentType == .instances
+                )
+                .layoutPriority(2)
+            }
+
+            DynamicAIAgentButton(
+                isActive: viewModel.isAIAgentPresented,
+                action: toggleAIAgent
+            )
+            .fixedSize()
+
+            Spacer(minLength: 0)
+        }
+    }
+
+    private var showsOpenedFeatureSwitcher: Bool {
+        viewModel.contentType == .customExpanded || viewModel.contentType == .instances
+    }
+
+    private var physicalNotchMusicLeadingOffset: CGFloat {
+        (notchSize.width / 2) + (viewModel.deviceNotchRect.width / 2) + 46
+    }
+
+    private func handleOpenedFeatureSelection(_ featureID: String) {
+        viewModel.isAIAgentPresented = false
+        viewModel.openedSizeOverride = nil
+        viewModel.presentCustomExpanded(reason: .click)
     }
 
     // MARK: - Content View (Opened State)
@@ -1894,7 +1934,7 @@ private struct DynamicAIAgentButton: View {
             .overlay(Capsule().strokeBorder(Color.cyan.opacity(0.35)))
         }
         .buttonStyle(.plain)
-        .help(isActive ? "返回 Dynamic" : "打开 AI Agent")
+        .help(isActive ? "返回摸鱼岛" : "打开 AI Agent")
         .onHover { isHovering = $0 }
     }
 }
