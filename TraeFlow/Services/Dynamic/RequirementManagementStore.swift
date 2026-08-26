@@ -230,6 +230,33 @@ final class RequirementManagementStore: ObservableObject {
         storageMessageIsError = false
     }
 
+    @discardableResult
+    func moveDocumentToTrash(_ document: RequirementDocument, requirementID: String) -> Bool {
+        guard let index = requirements.firstIndex(where: { $0.id == requirementID }),
+              requirements[index].documents.contains(where: { $0.id == document.id }) else {
+            setStorageError("找不到该文档，无法删除")
+            return false
+        }
+
+        let fileURL = URL(fileURLWithPath: document.storedPath)
+        do {
+            if FileManager.default.fileExists(atPath: fileURL.path) {
+                try FileManager.default.trashItem(at: fileURL, resultingItemURL: nil)
+            }
+
+            var updatedRequirement = requirements[index]
+            updatedRequirement.documents.removeAll { $0.id == document.id }
+            updatedRequirement.updatedAt = Date()
+            requirements[index] = updatedRequirement
+            persist()
+            setStorageMessage("已移到废纸篓：\(document.name)")
+            return true
+        } catch {
+            setStorageError("无法删除「\(document.name)」：\(error.localizedDescription)")
+            return false
+        }
+    }
+
     func openDocument(_ document: RequirementDocument) {
         NSWorkspace.shared.open(URL(fileURLWithPath: document.storedPath))
     }

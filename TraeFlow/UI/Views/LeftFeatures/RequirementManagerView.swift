@@ -9,6 +9,8 @@ struct RequirementManagerView: View {
     @State private var newDetails = ""
     @State private var newPriority = "中优先级"
     @State private var isChoosingDocuments = false
+    @State private var documentPendingDeletion: RequirementDocument?
+    @State private var isConfirmingDocumentDeletion = false
 
     var body: some View {
         HStack(spacing: 14) {
@@ -26,6 +28,23 @@ struct RequirementManagerView: View {
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         .sheet(isPresented: $isAddingRequirement) {
             addRequirementSheet
+        }
+        .alert(
+            "将文件移到废纸篓？",
+            isPresented: $isConfirmingDocumentDeletion,
+            presenting: documentPendingDeletion
+        ) { document in
+            Button("取消", role: .cancel) {
+                documentPendingDeletion = nil
+            }
+            Button("移到废纸篓", role: .destructive) {
+                if let requirementID = store.selectedRequirementID {
+                    store.moveDocumentToTrash(document, requirementID: requirementID)
+                }
+                documentPendingDeletion = nil
+            }
+        } message: { document in
+            Text("“\(document.name)”将从当前需求中移除，并放入 macOS 废纸篓，可在废纸篓中恢复。")
         }
         .onChange(of: store.selectedRequirementID) { _, _ in
             selectedStage = store.selectedRequirement?.currentStage ?? .prd
@@ -214,31 +233,47 @@ struct RequirementManagerView: View {
                     ScrollView {
                         LazyVStack(spacing: 7) {
                             ForEach(documents) { document in
-                                Button {
-                                    store.openDocument(document)
-                                } label: {
-                                    HStack(spacing: 10) {
-                                        Image(systemName: documentIcon(for: document.name))
-                                            .foregroundStyle(.cyan)
-                                            .frame(width: 18)
-                                        VStack(alignment: .leading, spacing: 3) {
-                                            Text(document.name)
-                                                .font(.system(size: 12, weight: .semibold))
-                                                .foregroundStyle(.white.opacity(0.9))
-                                                .lineLimit(2)
-                                                .truncationMode(.middle)
-                                            Text("\(document.stage.title) · \(document.uploadedAt.formatted(date: .abbreviated, time: .shortened))")
-                                                .font(.system(size: 9))
+                                HStack(spacing: 6) {
+                                    Button {
+                                        store.openDocument(document)
+                                    } label: {
+                                        HStack(spacing: 10) {
+                                            Image(systemName: documentIcon(for: document.name))
+                                                .foregroundStyle(.cyan)
+                                                .frame(width: 18)
+                                            VStack(alignment: .leading, spacing: 3) {
+                                                Text(document.name)
+                                                    .font(.system(size: 12, weight: .semibold))
+                                                    .foregroundStyle(.white.opacity(0.9))
+                                                    .lineLimit(2)
+                                                    .truncationMode(.middle)
+                                                Text("\(document.stage.title) · \(document.uploadedAt.formatted(date: .abbreviated, time: .shortened))")
+                                                    .font(.system(size: 9))
+                                                    .foregroundStyle(.secondary)
+                                            }
+                                            Spacer()
+                                            Image(systemName: "arrow.up.forward.app")
                                                 .foregroundStyle(.secondary)
                                         }
-                                        Spacer()
-                                        Image(systemName: "arrow.up.forward.app")
-                                            .foregroundStyle(.secondary)
+                                        .contentShape(Rectangle())
                                     }
-                                    .padding(10)
-                                    .background(Color.white.opacity(0.035), in: RoundedRectangle(cornerRadius: 9))
+                                    .buttonStyle(.plain)
+
+                                    Button {
+                                        documentPendingDeletion = document
+                                        isConfirmingDocumentDeletion = true
+                                    } label: {
+                                        Image(systemName: "trash")
+                                            .font(.system(size: 11, weight: .semibold))
+                                            .foregroundStyle(Color.red.opacity(0.88))
+                                            .frame(width: 30, height: 30)
+                                            .background(Color.red.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
+                                    }
+                                    .buttonStyle(.plain)
+                                    .help("删除文件")
                                 }
-                                .buttonStyle(.plain)
+                                .padding(8)
+                                .background(Color.white.opacity(0.035), in: RoundedRectangle(cornerRadius: 9))
                             }
                         }
                     }
