@@ -165,6 +165,7 @@ final class RequirementManagementStore: ObservableObject {
         }
 
         let requirement = requirements[index]
+        var updatedRequirement = requirement
         let destinationDirectory: URL
         do {
             destinationDirectory = try createFolderStructure(for: requirement)
@@ -175,6 +176,7 @@ final class RequirementManagementStore: ObservableObject {
         }
 
         var importedCount = 0
+        var importedNames: [String] = []
         var failedNames: [String] = []
 
         for sourceURL in sourceURLs {
@@ -191,31 +193,41 @@ final class RequirementManagementStore: ObservableObject {
             )
             do {
                 try FileManager.default.copyItem(at: sourceURL, to: destinationURL)
-                requirements[index].documents.append(RequirementDocument(
+                updatedRequirement.documents.append(RequirementDocument(
                     id: UUID().uuidString,
                     stage: stage,
-                    name: sourceURL.lastPathComponent,
+                    name: destinationURL.lastPathComponent,
                     storedPath: destinationURL.path,
                     uploadedAt: Date()
                 ))
                 importedCount += 1
+                importedNames.append(destinationURL.lastPathComponent)
             } catch {
                 failedNames.append(sourceURL.lastPathComponent)
             }
         }
 
         if importedCount > 0 {
-            requirements[index].updatedAt = Date()
+            updatedRequirement.updatedAt = Date()
+            // 通过完整元素赋值确保 @Published 数组立即通知界面刷新。
+            requirements[index] = updatedRequirement
             persist()
         }
 
         if failedNames.isEmpty {
-            setStorageMessage("已将 \(importedCount) 个文件保存到「\(stage.title)」文件夹")
+            let names = importedNames.joined(separator: "、")
+            setStorageMessage("已保存到「\(stage.title)」：\(names)")
         } else if importedCount > 0 {
-            setStorageError("已保存 \(importedCount) 个文件，\(failedNames.count) 个文件保存失败")
+            let names = importedNames.joined(separator: "、")
+            setStorageError("已保存：\(names)；另有 \(failedNames.count) 个文件保存失败")
         } else {
             setStorageError("文件保存失败，请检查文件访问权限")
         }
+    }
+
+    func clearStorageMessage() {
+        storageMessage = nil
+        storageMessageIsError = false
     }
 
     func openDocument(_ document: RequirementDocument) {

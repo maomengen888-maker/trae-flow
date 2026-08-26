@@ -29,6 +29,7 @@ struct RequirementManagerView: View {
         }
         .onChange(of: store.selectedRequirementID) { _, _ in
             selectedStage = store.selectedRequirement?.currentStage ?? .prd
+            store.clearStorageMessage()
         }
     }
 
@@ -54,6 +55,7 @@ struct RequirementManagerView: View {
                         Button {
                             store.selectedRequirementID = requirement.id
                             selectedStage = requirement.currentStage
+                            store.clearStorageMessage()
                         } label: {
                             VStack(alignment: .leading, spacing: 6) {
                                 Text(requirement.code)
@@ -169,18 +171,43 @@ struct RequirementManagerView: View {
                     )
                     .font(.system(size: 10))
                     .foregroundStyle(store.storageMessageIsError ? Color.orange : Color.green)
-                    .lineLimit(2)
+                    .lineLimit(3)
+                    .textSelection(.enabled)
                 }
 
-                let documents = requirement.documents.filter { $0.stage == selectedStage }
+                let documents = requirement.documents
+                    .filter { $0.stage == selectedStage }
+                    .sorted { $0.uploadedAt > $1.uploadedAt }
+                HStack(spacing: 7) {
+                    Text("文档名称")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.84))
+                    Text("\(documents.count)")
+                        .font(.system(size: 9, weight: .medium, design: .rounded))
+                        .foregroundStyle(.cyan)
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 2)
+                        .background(Capsule().fill(Color.cyan.opacity(0.12)))
+                    Spacer()
+                }
+
                 if documents.isEmpty {
                     VStack(spacing: 8) {
                         Image(systemName: "arrow.up.doc")
                             .font(.system(size: 25, weight: .light))
                             .foregroundStyle(.cyan.opacity(0.7))
-                        Text("还没有上传文档")
+                        Text("该阶段还没有文档")
                             .font(.system(size: 11))
                             .foregroundStyle(.secondary)
+                        if !requirement.documents.isEmpty {
+                            Text("其他阶段已有 \(requirement.documents.count) 个文档，可点击上方阶段查看文件名")
+                                .font(.system(size: 9))
+                                .foregroundStyle(.secondary.opacity(0.75))
+                        } else {
+                            Text("上传后将在这里显示完整文档名")
+                                .font(.system(size: 9))
+                                .foregroundStyle(.secondary.opacity(0.75))
+                        }
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
@@ -191,13 +218,16 @@ struct RequirementManagerView: View {
                                     store.openDocument(document)
                                 } label: {
                                     HStack(spacing: 10) {
-                                        Image(systemName: "doc.fill")
+                                        Image(systemName: documentIcon(for: document.name))
                                             .foregroundStyle(.cyan)
+                                            .frame(width: 18)
                                         VStack(alignment: .leading, spacing: 3) {
                                             Text(document.name)
-                                                .font(.system(size: 11, weight: .medium))
+                                                .font(.system(size: 12, weight: .semibold))
                                                 .foregroundStyle(.white.opacity(0.9))
-                                            Text(document.uploadedAt.formatted(date: .abbreviated, time: .shortened))
+                                                .lineLimit(2)
+                                                .truncationMode(.middle)
+                                            Text("\(document.stage.title) · \(document.uploadedAt.formatted(date: .abbreviated, time: .shortened))")
                                                 .font(.system(size: 9))
                                                 .foregroundStyle(.secondary)
                                         }
@@ -231,6 +261,7 @@ struct RequirementManagerView: View {
                 let current = !requirement.isLaunched && stage == requirement.currentStage
                 Button {
                     selectedStage = stage
+                    store.clearStorageMessage()
                 } label: {
                     VStack(alignment: .leading, spacing: 7) {
                         HStack {
@@ -327,5 +358,22 @@ struct RequirementManagerView: View {
 
     private var panelBackground: some View {
         Color(red: 0.035, green: 0.065, blue: 0.115).opacity(0.94)
+    }
+
+    private func documentIcon(for fileName: String) -> String {
+        switch URL(fileURLWithPath: fileName).pathExtension.lowercased() {
+        case "pdf":
+            return "doc.richtext.fill"
+        case "doc", "docx", "pages", "txt", "md":
+            return "doc.text.fill"
+        case "png", "jpg", "jpeg", "gif", "webp", "svg":
+            return "photo.fill"
+        case "ppt", "pptx", "key":
+            return "rectangle.on.rectangle.angled"
+        case "xls", "xlsx", "csv", "numbers":
+            return "tablecells.fill"
+        default:
+            return "doc.fill"
+        }
     }
 }
