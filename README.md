@@ -32,21 +32,9 @@
 
 ![抖音悬浮小窗](docs/wechat-assets/03-douyin-floating.png)
 
-### AI Agent 与 DeepSeek Harness
+### DeepSeek Harness
 
-内置接近 Codex 操作习惯的 AI 工作台，顶部可在两个工作区之间切换：
-
-- **简屿 AI**：支持历史会话、流式回答和快捷任务。
-- **DeepSeek Harness**：在 AI 界面内启动并嵌入 DeepSeek 官方 Web UI，用于选择模型和工作区、使用插件/工具并审批敏感操作。
-
-简屿 AI 当前支持：
-
-- Dify Agent
-- DeepSeek
-- OpenAI
-- OpenAI 兼容服务（自定义 Base URL 与模型名）
-
-API Key 仅保存在本机运行目录的私有配置文件中，不写入源码，也不应提交到 GitHub。
+点击右上角 AI 入口后，直接启动并嵌入 DeepSeek 官方 Web UI，不再显示额外的 AI 工作区切换栏。可在 Harness 中选择模型和工作区、使用插件/工具并审批敏感操作。
 
 ![AI Agent](docs/wechat-assets/04-agent.png)
 
@@ -111,7 +99,6 @@ xcodebuild \
 
 - 不要把 API Key 写进源码、截图、Issue 或提交记录。
 - `Config/LocalSecrets.xcconfig` 和本地构建目录已加入 `.gitignore`。
-- AI 凭据使用本机运行目录中的权限受限文件保存，以避免每次打开 AI 都弹出钥匙串授权；这比系统钥匙串保护更弱，请只在个人可信设备上使用。
 - DeepSeek Harness 是官方开发者预览功能，会读写你在 Harness 内选择的工作区；请仔细检查工作区范围和每次操作审批。
 - 项目内嵌网页来自第三方服务，登录、内容和可用性受对应网站规则影响。
 
