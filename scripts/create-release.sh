@@ -12,7 +12,7 @@ RELEASE_DIR="${TRAE_FLOW_RELEASE_DIR:-$PROJECT_DIR/releases/signed}"
 WEBSITE_DIR="${TRAE_FLOW_WEBSITE:-$PROJECT_DIR/../TraeFlow-website}"
 WEBSITE_PUBLIC="$WEBSITE_DIR/public"
 
-APP_PATH="$EXPORT_PATH/TRAE FLOW.app"
+APP_PATH="$EXPORT_PATH/简屿.app"
 APP_NAME="TraeFlow"
 NOTARY_PROFILE="${TRAE_FLOW_NOTARY_KEYCHAIN_PROFILE:-TraeFlow}"
 
@@ -85,15 +85,15 @@ else
         echo "Creating release v$VERSION..."
         gh release create "v$VERSION" "$DMG_PATH" \
             --repo "$GITHUB_REPO" \
-            --title "TRAE FLOW v$VERSION" \
+            --title "简屿 v$VERSION" \
             --notes "## Highlights
 
-- Download \`$(basename "$DMG_PATH")\` and install the latest TRAE FLOW release.
+- Download \`$(basename "$DMG_PATH")\` and install the latest 简屿 release.
 
 ## Notes
 
-- Open the DMG, drag TRAE FLOW to Applications, and launch it normally.
-- After installation, TRAE FLOW will automatically check for updates."
+- Open the DMG, drag 简屿 to Applications, and launch it normally.
+- After installation, 简屿 will automatically check for updates."
     fi
 
     GITHUB_DOWNLOAD_URL="https://github.com/$GITHUB_REPO/releases/download/v$VERSION/$(basename "$DMG_PATH")"

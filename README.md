@@ -1,7 +1,7 @@
-# 摸鱼岛
+# 简屿
 
 <p align="center">
-  <img src="TraeFlow/Assets.xcassets/AppIcon.appiconset/icon_256x256.png" width="128" alt="摸鱼岛图标">
+  <img src="TraeFlow/Assets.xcassets/AppIcon.appiconset/icon_256x256.png" width="128" alt="简屿图标">
 </p>
 
 <p align="center">
@@ -14,7 +14,7 @@
   <img src="https://img.shields.io/badge/License-Apache%202.0-4F46E5?style=flat-square" alt="Apache 2.0">
 </p>
 
-> 摸鱼岛目前处于个人开发与体验阶段，功能和界面仍会持续调整。欢迎 Star、Fork、提交 Issue。
+> 简屿目前处于个人开发与体验阶段，功能和界面仍会持续调整。欢迎 Star、Fork、提交 Issue。
 
 ## 功能预览
 
@@ -32,9 +32,14 @@
 
 ![抖音悬浮小窗](docs/wechat-assets/03-douyin-floating.png)
 
-### AI Agent 工作台
+### AI Agent 与 DeepSeek Harness
 
-内置接近 Codex 操作习惯的会话界面，支持历史会话、流式回答和快捷任务。当前支持：
+内置接近 Codex 操作习惯的 AI 工作台，顶部可在两个工作区之间切换：
+
+- **简屿 AI**：支持历史会话、流式回答和快捷任务。
+- **DeepSeek Harness**：在 AI 界面内启动并嵌入 DeepSeek 官方 Web UI，用于选择模型和工作区、使用插件/工具并审批敏感操作。
+
+简屿 AI 当前支持：
 
 - Dify Agent
 - DeepSeek
@@ -74,9 +79,10 @@ APP 管理 → 需求管理 → 监控提醒 → 抖音 → 音乐              
 
 - macOS 14 或更高版本
 - Xcode（用于从源码构建）
+- Node.js 与 `npx`（仅在使用 DeepSeek Harness 时需要）
 - Apple Silicon 或 Intel Mac
 
-抖音、Apple Music、Dify 和其他 AI 模型服务需要网络连接；相关账户和 API 调用费用由对应服务提供方决定。
+抖音、Apple Music、Dify、DeepSeek Harness 首次下载和其他 AI 模型服务需要网络连接；相关账户和 API 调用费用由对应服务提供方决定。
 
 ## 从源码运行
 
@@ -86,7 +92,7 @@ cd trae-flow
 open TraeFlow.xcodeproj
 ```
 
-在 Xcode 中选择 `TraeFlow` Scheme 和 `My Mac`，然后点击 Run。构建后的应用名称为 `摸鱼岛.app`，Bundle ID 为 `ai.dynamic.app`。
+在 Xcode 中选择 `TraeFlow` Scheme 和 `My Mac`，然后点击 Run。构建后的应用名称为 `简屿.app`，Bundle ID 为 `ai.dynamic.app`。
 
 也可以使用命令行构建：
 
@@ -106,11 +112,12 @@ xcodebuild \
 - 不要把 API Key 写进源码、截图、Issue 或提交记录。
 - `Config/LocalSecrets.xcconfig` 和本地构建目录已加入 `.gitignore`。
 - AI 凭据使用本机运行目录中的权限受限文件保存，以避免每次打开 AI 都弹出钥匙串授权；这比系统钥匙串保护更弱，请只在个人可信设备上使用。
+- DeepSeek Harness 是官方开发者预览功能，会读写你在 Harness 内选择的工作区；请仔细检查工作区范围和每次操作审批。
 - 项目内嵌网页来自第三方服务，登录、内容和可用性受对应网站规则影响。
 
 ## 项目背景与致谢
 
-摸鱼岛基于 [ccsonicc333/trae-flow](https://github.com/ccsonicc333/trae-flow) 继续设计和开发。原项目专注于 TRAE 任务状态、Mac 灵动岛和自定义区域；本版本将产品方向扩展为桌面 App 入口、抖音小窗、AI Agent 与需求管理。
+简屿基于 [ccsonicc333/trae-flow](https://github.com/ccsonicc333/trae-flow) 继续设计和开发。原项目专注于 TRAE 任务状态、Mac 灵动岛和自定义区域；本版本将产品方向扩展为桌面 App 入口、抖音小窗、AI Agent 与需求管理。
 
 感谢原项目作者和所有开源贡献者。历史上的 `TraeFlow`、`Dynamic` 类型名与目录名为兼容原项目数据和结构而保留。
 

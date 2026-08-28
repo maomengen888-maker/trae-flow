@@ -16,7 +16,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "FD33FD5C2EDF32D7002A6548"
-               BuildableName = "TRAE FLOW.app"
+               BuildableName = "简屿.app"
                BlueprintName = "TraeFlow"
                ReferencedContainer = "container:TraeFlow.xcodeproj">
             </BuildableReference>
@@ -61,7 +61,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "FD33FD5C2EDF32D7002A6548"
-            BuildableName = "TRAE FLOW.app"
+            BuildableName = "简屿.app"
             BlueprintName = "TraeFlow"
             ReferencedContainer = "container:TraeFlow.xcodeproj">
          </BuildableReference>
@@ -105,7 +105,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "FD33FD5C2EDF32D7002A6548"
-            BuildableName = "TRAE FLOW.app"
+            BuildableName = "简屿.app"
             BlueprintName = "TraeFlow"
             ReferencedContainer = "container:TraeFlow.xcodeproj">
          </BuildableReference>
@@ -122,7 +122,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "FD33FD5C2EDF32D7002A6548"
-            BuildableName = "TRAE FLOW.app"
+            BuildableName = "简屿.app"
             BlueprintName = "TraeFlow"
             ReferencedContainer = "container:TraeFlow.xcodeproj">
          </BuildableReference>

@@ -32,7 +32,7 @@
 		A10000000000000000000002 /* TraeFlowUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TraeFlowUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		A1000000000000000000001E /* App.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = App.xcconfig; sourceTree = "<group>"; };
 		A1000000000000000000001F /* LocalSecrets.example.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = LocalSecrets.example.xcconfig; sourceTree = "<group>"; };
-		FD33FD5D2EDF32D7002A6548 /* 摸鱼岛.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "摸鱼岛.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		FD33FD5D2EDF32D7002A6548 /* 简屿.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "简屿.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -125,7 +125,7 @@
 		FD33FD5E2EDF32D7002A6548 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				FD33FD5D2EDF32D7002A6548 /* 摸鱼岛.app */,
+				FD33FD5D2EDF32D7002A6548 /* 简屿.app */,
 				A10000000000000000000001 /* TraeFlowTests.xctest */,
 				A10000000000000000000002 /* TraeFlowUITests.xctest */,
 			);
@@ -203,7 +203,7 @@
 				A1000000000000000000001C /* Sparkle */,
 			);
 			productName = TraeFlow;
-			productReference = FD33FD5D2EDF32D7002A6548 /* 摸鱼岛.app */;
+			productReference = FD33FD5D2EDF32D7002A6548 /* 简屿.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -382,7 +382,7 @@
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/摸鱼岛.app/Contents/MacOS/摸鱼岛";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/简屿.app/Contents/MacOS/简屿";
 				TEST_TARGET_NAME = TraeFlow;
 			};
 			name = Debug;
@@ -411,7 +411,7 @@
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/摸鱼岛.app/Contents/MacOS/摸鱼岛";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/简屿.app/Contents/MacOS/简屿";
 				TEST_TARGET_NAME = TraeFlow;
 			};
 			name = Release;
@@ -626,7 +626,7 @@
 				MARKETING_VERSION = 1.2.1;
 				PRODUCT_BUNDLE_IDENTIFIER = ai.dynamic.app;
 				PRODUCT_MODULE_NAME = TRAE_FLOW;
-				PRODUCT_NAME = "摸鱼岛";
+				PRODUCT_NAME = "简屿";
 				REGISTER_APP_GROUPS = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -672,7 +672,7 @@
 				MARKETING_VERSION = 1.2.1;
 				PRODUCT_BUNDLE_IDENTIFIER = ai.dynamic.app;
 				PRODUCT_MODULE_NAME = TRAE_FLOW;
-				PRODUCT_NAME = "摸鱼岛";
+				PRODUCT_NAME = "简屿";
 				REGISTER_APP_GROUPS = YES;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;

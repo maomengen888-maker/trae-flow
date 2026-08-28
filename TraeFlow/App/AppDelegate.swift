@@ -136,6 +136,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillTerminate(_ notification: Notification) {
         screenObserver = nil
+        DeepSeekHarnessManager.shared.stop()
         UserIdleAutoProtection.shared.stop()
         startupSessionMonitor.stopMonitoring()
     }

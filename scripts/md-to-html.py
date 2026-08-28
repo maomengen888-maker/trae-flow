@@ -233,7 +233,7 @@ def main():
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TRAE FLOW 体验用例</title>
+<title>简屿 体验用例</title>
 <style>
   :root {{
     --primary: #0A84FF;

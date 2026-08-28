@@ -49,7 +49,7 @@ struct DynamicAppManagerView: View {
         }
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         .confirmationDialog(
-            pendingHideApplication.map { "从摸鱼岛隐藏“\($0.name)”？" } ?? "隐藏 APP？",
+            pendingHideApplication.map { "从简屿隐藏“\($0.name)”？" } ?? "隐藏 APP？",
             isPresented: Binding(
                 get: { pendingHideApplication != nil },
                 set: { if !$0 { pendingHideApplication = nil } }

@@ -3,9 +3,9 @@
 <plist version="1.0">
 <dict>
     <key>CFBundleName</key>
-    <string>摸鱼岛</string>
+    <string>简屿</string>
     <key>CFBundleDisplayName</key>
-    <string>摸鱼岛</string>
+    <string>简屿</string>
     <key>CFBundleIdentifier</key>
     <string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
     <key>CFBundleVersion</key>
@@ -15,9 +15,14 @@
     <key>LSUIElement</key>
     <false/>
     <key>NSAppleEventsUsageDescription</key>
-    <string>摸鱼岛需要使用 Apple Events 打开并聚焦你选择的应用。</string>
+    <string>简屿需要使用 Apple Events 打开并聚焦你选择的应用。</string>
     <key>NSHumanReadableCopyright</key>
-    <string>Copyright 2026 摸鱼岛 Contributors. All rights reserved.</string>
+    <string>Copyright 2026 简屿 Contributors. All rights reserved.</string>
+    <key>NSAppTransportSecurity</key>
+    <dict>
+        <key>NSAllowsLocalNetworking</key>
+        <true/>
+    </dict>
     <key>PINGTelemetryDailyEventLimit</key>
     <string>$(TRAE_FLOW_TELEMETRY_DAILY_EVENT_LIMIT)</string>
     <key>PINGTelemetrySLSHost</key>

@@ -1934,7 +1934,7 @@ private struct DynamicAIAgentButton: View {
             .overlay(Capsule().strokeBorder(Color.cyan.opacity(0.35)))
         }
         .buttonStyle(.plain)
-        .help(isActive ? "返回摸鱼岛" : "打开 AI Agent")
+        .help(isActive ? "返回简屿" : "打开 AI Agent")
         .onHover { isHovering = $0 }
     }
 }

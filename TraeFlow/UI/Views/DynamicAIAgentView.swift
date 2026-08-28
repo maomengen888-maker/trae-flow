@@ -3,9 +3,23 @@ import SwiftUI
 
 /// Dynamic 原生 AI 工作台：支持 Dify 与 OpenAI Chat Completions 兼容服务。
 struct DynamicAIAgentView: View {
+    private enum WorkspaceMode: String, CaseIterable, Identifiable {
+        case chat
+        case harness
+
+        var id: String { rawValue }
+        var title: String {
+            switch self {
+            case .chat: return "简屿 AI"
+            case .harness: return "DeepSeek Harness"
+            }
+        }
+    }
+
     @ObservedObject private var store = DynamicDifyChatStore.shared
     @State private var composerText = ""
     @State private var isShowingConfiguration = false
+    @State private var workspaceMode: WorkspaceMode = .chat
     @State private var providerInput: DynamicAIProvider = .dify
     @State private var apiKeyInput = ""
     @State private var apiBaseURLInput = ""
@@ -13,10 +27,26 @@ struct DynamicAIAgentView: View {
     @FocusState private var isComposerFocused: Bool
 
     var body: some View {
-        HStack(spacing: 0) {
-            sidebar
+        VStack(spacing: 0) {
+            workspaceSwitcher
             Divider().overlay(Color.white.opacity(0.08))
-            chatWorkspace
+            Group {
+                switch workspaceMode {
+                case .chat:
+                    HStack(spacing: 0) {
+                        sidebar
+                        Divider().overlay(Color.white.opacity(0.08))
+                        chatWorkspace
+                    }
+                    .overlay {
+                        if isShowingConfiguration || !store.isAPIKeyConfigured {
+                            configurationOverlay
+                        }
+                    }
+                case .harness:
+                    DeepSeekHarnessView()
+                }
+            }
         }
         .background(Color(red: 0.035, green: 0.038, blue: 0.047))
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
@@ -24,17 +54,67 @@ struct DynamicAIAgentView: View {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .strokeBorder(Color.white.opacity(0.09), lineWidth: 1)
         }
-        .overlay {
-            if isShowingConfiguration || !store.isAPIKeyConfigured {
-                configurationOverlay
-            }
-        }
         .onAppear {
             loadConfigurationInputs()
             isShowingConfiguration = !store.isAPIKeyConfigured
             store.connectIfNeeded()
             if store.isAPIKeyConfigured { isComposerFocused = true }
         }
+        .onChange(of: workspaceMode) { _, mode in
+            if mode == .harness {
+                DeepSeekHarnessManager.shared.start()
+            } else if store.isAPIKeyConfigured {
+                isComposerFocused = true
+            }
+        }
+    }
+
+    private var workspaceSwitcher: some View {
+        HStack(spacing: 12) {
+            HStack(spacing: 8) {
+                aiIcon(size: 25)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("AI 工作台")
+                        .font(.system(size: 11, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.white.opacity(0.9))
+                    Text("对话与官方 Agent Harness")
+                        .font(.system(size: 8, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.36))
+                }
+            }
+
+            Spacer()
+
+            Picker("AI 工作区", selection: $workspaceMode) {
+                ForEach(WorkspaceMode.allCases) { mode in
+                    Text(mode.title).tag(mode)
+                }
+            }
+            .labelsHidden()
+            .pickerStyle(.segmented)
+            .frame(width: 300)
+
+            Spacer()
+
+            if workspaceMode == .harness {
+                Text("官方开发者预览")
+                    .font(.system(size: 8, weight: .semibold))
+                    .foregroundStyle(.orange)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 4)
+                    .background(Color.orange.opacity(0.12), in: Capsule())
+            } else {
+                Text(store.providerDisplayName)
+                    .font(.system(size: 8, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.42))
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 4)
+                    .background(Color.white.opacity(0.06), in: Capsule())
+            }
+        }
+        .padding(.horizontal, 14)
+        .frame(height: 46)
+        .background(Color(red: 0.025, green: 0.027, blue: 0.033))
     }
 
     private var sidebar: some View {
@@ -42,7 +122,7 @@ struct DynamicAIAgentView: View {
             HStack(spacing: 9) {
                 aiIcon(size: 30)
                 VStack(alignment: .leading, spacing: 1) {
-                    Text("摸鱼岛 AI")
+                    Text("简屿 AI")
                         .font(.system(size: 13, weight: .semibold, design: .rounded))
                         .foregroundStyle(.white)
                     Text(store.serviceDescription)
@@ -227,7 +307,7 @@ struct DynamicAIAgentView: View {
             if message.role == .assistant { aiIcon(size: 27) }
 
             VStack(alignment: .leading, spacing: 8) {
-                Text(message.role == .user ? "你" : "摸鱼岛")
+                Text(message.role == .user ? "你" : "简屿")
                     .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(.white.opacity(0.46))
                 if message.text.isEmpty && message.isStreaming {
@@ -275,7 +355,7 @@ struct DynamicAIAgentView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
             HStack(alignment: .bottom, spacing: 10) {
-                TextField("向摸鱼岛发送消息…", text: $composerText, axis: .vertical)
+                TextField("向简屿发送消息…", text: $composerText, axis: .vertical)
                     .textFieldStyle(.plain)
                     .font(.system(size: 12))
                     .lineLimit(1...6)
