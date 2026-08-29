@@ -18,6 +18,13 @@ final class IslandPresentationCoordinator {
     private var activeDetachmentPayload: IslandDetachmentPayload?
     private var cancellables = Set<AnyCancellable>()
 
+    #if DEBUG
+    /// 测试用：记录 docked 窗口创建次数，验证当前“重新停靠即重建”的窗口策略。
+    private(set) var dockedWindowRecreationCount = 0
+    /// 测试用：确认重建后仍持有可用的 docked 窗口控制器。
+    var dockedWindowControllerForTesting: NotchWindowController? { dockedWindowController }
+    #endif
+
     init(screen: NSScreen, previousViewModel: NotchViewModel? = nil) {
         self.screen = screen
         self.viewModel = previousViewModel ?? Self.makeViewModel(for: screen)
@@ -276,6 +283,10 @@ final class IslandPresentationCoordinator {
     }
 
     private func recreateDockedWindow(performBootAnimation: Bool) {
+        #if DEBUG
+        dockedWindowRecreationCount += 1
+        #endif
+
         if let controller = dockedWindowController {
             controller.window?.contentViewController = nil
             controller.window?.orderOut(nil)

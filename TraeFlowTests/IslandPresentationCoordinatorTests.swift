@@ -16,7 +16,7 @@ final class IslandPresentationCoordinatorTests: XCTestCase {
         super.tearDown()
     }
 
-    func testRedockDetachedReusesExistingDockedWindow() throws {
+    func testRedockDetachedRecreatesDockedWindow() throws {
         AppSettings.surfaceMode = .notch
         let screen = try XCTUnwrap(NSScreen.main)
         let coordinator = IslandPresentationCoordinator(screen: screen)
@@ -36,13 +36,13 @@ final class IslandPresentationCoordinatorTests: XCTestCase {
         // 宠物拖回 Flow 岛。
         coordinator.redockDetached()
 
-        // 分离期间 docked 窗口一直保留，拖回时不应再重建。
-        XCTAssertEqual(coordinator.dockedWindowRecreationCount, 1)
+        // 当前窗口策略在拖回时重建 docked 窗口，刷新事件与几何状态。
+        XCTAssertEqual(coordinator.dockedWindowRecreationCount, 2)
         XCTAssertEqual(coordinator.viewModel.presentationMode, .docked)
         XCTAssertNotNil(coordinator.dockedWindowControllerForTesting)
     }
 
-    func testRepeatedDetachAndRedockDoesNotAccumulateExtraRecreations() throws {
+    func testRepeatedDetachAndRedockRecreatesOncePerCycle() throws {
         AppSettings.surfaceMode = .notch
         let screen = try XCTUnwrap(NSScreen.main)
         let coordinator = IslandPresentationCoordinator(screen: screen)
@@ -61,8 +61,8 @@ final class IslandPresentationCoordinatorTests: XCTestCase {
             XCTAssertEqual(coordinator.viewModel.presentationMode, .docked)
         }
 
-        // 多次 detach/redock 循环后，docked 窗口应始终复用，总重建次数保持为 1。
-        XCTAssertEqual(coordinator.dockedWindowRecreationCount, 1)
+        // 初始化一次，随后每次 redock 各重建一次。
+        XCTAssertEqual(coordinator.dockedWindowRecreationCount, 4)
         XCTAssertNotNil(coordinator.dockedWindowControllerForTesting)
     }
 }
