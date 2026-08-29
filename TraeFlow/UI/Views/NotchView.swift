@@ -89,6 +89,8 @@ struct NotchView: View {
     @Namespace private var activityNamespace
 
     private let petIconSize: CGFloat = 22
+    /// 关闭态宠物向左收进，避免贴近刘海右缘并占用相邻菜单栏空间。
+    private let closedMascotHorizontalOffset: CGFloat = -10
 
     /// Whether any tracked session is currently processing or compacting
     private var isAnyProcessing: Bool {
@@ -718,7 +720,8 @@ struct NotchView: View {
             // Header row - always present, contains pet and spinner that persist across states
             headerRow
                 .frame(height: max(24, closedNotchSize.height))
-                .zIndex(1)
+                // 保证原生顶栏在 WKWebView 合成层之上，AI 页面不得拦截导航点击。
+                .zIndex(100)
 
             // Main content only when opened
             if viewModel.status == .opened {
@@ -774,6 +777,7 @@ struct NotchView: View {
                     if viewModel.status != .opened {
                         closedRightMascotRegion
                             .frame(width: closedTrailingWidth, alignment: .trailing)
+                            .offset(x: closedMascotHorizontalOffset)
                     }
                 }
             }
@@ -1046,7 +1050,9 @@ struct NotchView: View {
     }
 
     private var showsOpenedFeatureSwitcher: Bool {
-        viewModel.contentType == .customExpanded || viewModel.contentType == .instances
+        viewModel.isAIAgentPresented
+            || viewModel.contentType == .customExpanded
+            || viewModel.contentType == .instances
     }
 
     private var physicalNotchMusicLeadingOffset: CGFloat {
@@ -1054,9 +1060,7 @@ struct NotchView: View {
     }
 
     private func handleOpenedFeatureSelection(_ featureID: String) {
-        viewModel.isAIAgentPresented = false
-        viewModel.openedSizeOverride = nil
-        viewModel.presentCustomExpanded(reason: .click)
+        viewModel.presentExpandedFeature(id: featureID, reason: .click)
     }
 
     // MARK: - Content View (Opened State)

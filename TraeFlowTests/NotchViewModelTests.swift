@@ -115,6 +115,32 @@ final class NotchViewModelTests: XCTestCase {
         }
     }
 
+    func testPresentExpandedFeatureExitsAIAndSelectsRequestedFeature() async {
+        await MainActor.run {
+            let store = LeftFeatureStore.shared
+            let previousFeatureID = store.expandedActiveFeatureID
+            defer {
+                store.setExpandedActiveFeature(
+                    id: previousFeatureID ?? LeftFeature.appManagerID
+                )
+            }
+
+            let viewModel = makeViewModel()
+            viewModel.presentCustomExpanded(reason: .click)
+            viewModel.isAIAgentPresented = true
+            viewModel.openedSizeOverride = CGSize(width: 1_100, height: 800)
+
+            viewModel.presentExpandedFeature(id: LeftFeature.douyinID, reason: .click)
+
+            XCTAssertFalse(viewModel.isAIAgentPresented)
+            XCTAssertNil(viewModel.openedSizeOverride)
+            XCTAssertEqual(viewModel.status, .opened)
+            XCTAssertEqual(viewModel.openReason, .click)
+            XCTAssertEqual(viewModel.contentType, .customExpanded)
+            XCTAssertEqual(store.expandedActiveFeatureID, LeftFeature.douyinID)
+        }
+    }
+
     func testClickedSessionListUsesRoomierWidthThanCompactClosedNotch() async {
         await MainActor.run {
             let viewModel = makeViewModel()

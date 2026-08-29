@@ -107,28 +107,30 @@ private struct FeatureSwitcherButton: View {
     }
 
     var body: some View {
-        HStack(spacing: 5) {
-            FeatureIconView(feature: feature, size: 13, color: foregroundColor)
-            Text(feature.displayName)
-                .font(.system(size: 10, weight: .medium, design: .rounded))
-                .foregroundStyle(foregroundColor)
-                .lineLimit(1)
-        }
+        Button {
+            store.setExpandedActiveFeature(id: feature.id)
+            onSelect?(feature.id)
+        } label: {
+            HStack(spacing: 5) {
+                FeatureIconView(feature: feature, size: 13, color: foregroundColor)
+                Text(feature.displayName)
+                    .font(.system(size: 10, weight: .medium, design: .rounded))
+                    .foregroundStyle(foregroundColor)
+                    .lineLimit(1)
+            }
             .padding(.horizontal, 9)
             .frame(height: 28)
             .background(backgroundFill)
             .contentShape(Rectangle())
-            .onTapGesture {
-                store.setExpandedActiveFeature(id: feature.id)
-                onSelect?(feature.id)
+        }
+        .buttonStyle(.plain)
+        .help(feature.displayName)
+        .opacity(isDragging ? 0.4 : 1.0) // 拖拽中半透明
+        .onHover { hovering in
+            withAnimation(.easeOut(duration: 0.12)) {
+                isHovering = hovering
             }
-            .help(feature.displayName)
-            .opacity(isDragging ? 0.4 : 1.0) // 拖拽中半透明
-            .onHover { hovering in
-                withAnimation(.easeOut(duration: 0.12)) {
-                    isHovering = hovering
-                }
-            }
+        }
     }
 
     private var foregroundColor: Color {

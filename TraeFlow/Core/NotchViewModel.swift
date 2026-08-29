@@ -1167,6 +1167,15 @@ class NotchViewModel: ObservableObject {
         }
     }
 
+    /// 从 AI/Harness 或其他展开内容原子地切回指定的顶栏功能。
+    /// 先退出 AI 分支再选择功能，避免 WKWebView 更新期间的状态竞态。
+    func presentExpandedFeature(id featureID: String, reason: NotchOpenReason = .click) {
+        isAIAgentPresented = false
+        openedSizeOverride = nil
+        LeftFeatureStore.shared.setExpandedActiveFeature(id: featureID)
+        presentCustomExpanded(reason: reason)
+    }
+
     func presentSessionList(reason: NotchOpenReason = .click) {
         exitChat()
         presentCustomExpanded(reason: reason)
