@@ -80,11 +80,15 @@ final class RequirementManagementStore: ObservableObject {
     @Published private(set) var storageMessageIsError = false
 
     private static var persistenceURL: URL {
+        DynamicUserStoragePaths.dataURL.appendingPathComponent("dynamic-requirements.json")
+    }
+
+    private static var legacyPersistenceURL: URL {
         BridgeRuntimePaths.runtimeDirectoryURL.appendingPathComponent("dynamic-requirements.json")
     }
 
     private static var documentsRootURL: URL {
-        BridgeRuntimePaths.runtimeDirectoryURL.appendingPathComponent("requirements", isDirectory: true)
+        DynamicUserStoragePaths.requirementsURL
     }
 
     init() {
@@ -93,6 +97,7 @@ final class RequirementManagementStore: ObservableObject {
             seedInitialRequirement()
         }
         ensureFolderStructuresForExistingRequirements()
+        migrateLegacyDocumentFiles()
         selectedRequirementID = requirements.first?.id
     }
 
@@ -267,7 +272,11 @@ final class RequirementManagementStore: ObservableObject {
     }
 
     private func load() {
-        guard let data = try? Data(contentsOf: Self.persistenceURL),
+        try? DynamicUserStoragePaths.prepareDirectories()
+        let sourceURL = FileManager.default.fileExists(atPath: Self.persistenceURL.path)
+            ? Self.persistenceURL
+            : Self.legacyPersistenceURL
+        guard let data = try? Data(contentsOf: sourceURL),
               let decoded = try? JSONDecoder().decode([ManagedRequirement].self, from: data) else {
             requirements = []
             return
@@ -277,6 +286,7 @@ final class RequirementManagementStore: ObservableObject {
 
     private func persist() {
         do {
+            try DynamicUserStoragePaths.prepareDirectories()
             try FileManager.default.createDirectory(
                 at: Self.persistenceURL.deletingLastPathComponent(),
                 withIntermediateDirectories: true
@@ -299,6 +309,7 @@ final class RequirementManagementStore: ObservableObject {
     }
 
     private func createFolderStructure(for requirement: ManagedRequirement) throws -> URL {
+        try DynamicUserStoragePaths.prepareDirectories()
         let requirementDirectory = Self.documentsRootURL.appendingPathComponent(
             requirementDirectoryName(for: requirement),
             isDirectory: true
@@ -314,6 +325,45 @@ final class RequirementManagementStore: ObservableObject {
             )
         }
         return requirementDirectory
+    }
+
+    private func migrateLegacyDocumentFiles() {
+        var didChange = false
+        for requirementIndex in requirements.indices {
+            let requirement = requirements[requirementIndex]
+            guard let root = try? createFolderStructure(for: requirement) else { continue }
+            var updated = requirement
+            for documentIndex in updated.documents.indices {
+                let document = updated.documents[documentIndex]
+                let sourceURL = URL(fileURLWithPath: document.storedPath)
+                if sourceURL.standardizedFileURL.path.hasPrefix(Self.documentsRootURL.standardizedFileURL.path) {
+                    continue
+                }
+                guard FileManager.default.fileExists(atPath: sourceURL.path) else { continue }
+                let stageDirectory = root.appendingPathComponent(document.stage.directoryName, isDirectory: true)
+                let destinationURL = availableDestinationURL(for: document.name, in: stageDirectory)
+                do {
+                    try FileManager.default.copyItem(at: sourceURL, to: destinationURL)
+                    updated.documents[documentIndex] = RequirementDocument(
+                        id: document.id,
+                        stage: document.stage,
+                        name: destinationURL.lastPathComponent,
+                        storedPath: destinationURL.path,
+                        uploadedAt: document.uploadedAt
+                    )
+                    didChange = true
+                } catch {
+                    NSLog("[Dynamic] 旧需求文档迁移失败: \(error.localizedDescription)")
+                }
+            }
+            if updated != requirement {
+                updated.updatedAt = Date()
+                requirements[requirementIndex] = updated
+            }
+        }
+        if didChange || !FileManager.default.fileExists(atPath: Self.persistenceURL.path) {
+            persist()
+        }
     }
 
     private func requirementDirectoryName(for requirement: ManagedRequirement) -> String {

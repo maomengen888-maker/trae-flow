@@ -25,7 +25,8 @@ final class DynamicReminderStore: ObservableObject {
         refreshAuthorizationStatus()
     }
 
-    func addReminder(title: String, fireDate: Date) {
+    @discardableResult
+    func addReminder(title: String, fireDate: Date) -> String {
         let reminder = DynamicReminder(
             id: UUID().uuidString,
             title: title,
@@ -37,11 +38,18 @@ final class DynamicReminderStore: ObservableObject {
         reminders.sort { $0.fireDate < $1.fireDate }
         persist()
         requestPermissionAndSchedule(reminder)
+        return reminder.id
     }
 
     func removeReminder(_ reminder: DynamicReminder) {
         reminders.removeAll { $0.id == reminder.id }
         UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [reminder.id])
+        persist()
+    }
+
+    func removeReminder(id: String) {
+        reminders.removeAll { $0.id == id }
+        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [id])
         persist()
     }
 
@@ -68,6 +76,16 @@ final class DynamicReminderStore: ObservableObject {
         }
     }
 
+    /// 首次安装或系统尚未记录选择时发起一次授权；已有选择后不重复弹窗。
+    func requestNotificationPermissionIfNeeded() {
+        UNUserNotificationCenter.current().getNotificationSettings { [weak self] settings in
+            guard settings.authorizationStatus == .notDetermined else { return }
+            Task { @MainActor in
+                self?.requestNotificationPermission()
+            }
+        }
+    }
+
     private func requestPermissionAndSchedule(_ reminder: DynamicReminder) {
         UNUserNotificationCenter.current().getNotificationSettings { [weak self] settings in
             guard settings.authorizationStatus == .authorized || settings.authorizationStatus == .provisional else {
@@ -81,7 +99,7 @@ final class DynamicReminderStore: ObservableObject {
     private nonisolated func schedule(_ reminder: DynamicReminder) {
         guard reminder.isEnabled, reminder.fireDate > Date() else { return }
         let content = UNMutableNotificationContent()
-        content.title = "简屿监控提醒"
+        content.title = "灵动岛提醒"
         content.body = reminder.title
         content.sound = .default
         let interval = max(1, reminder.fireDate.timeIntervalSinceNow)

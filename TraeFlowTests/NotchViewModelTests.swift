@@ -152,6 +152,28 @@ final class NotchViewModelTests: XCTestCase {
         }
     }
 
+    func testHoveredWorkspaceUsesShortDynamicIslandPreview() async {
+        await MainActor.run {
+            LeftFeatureStore.shared.setExpandedActiveFeature(id: LeftFeature.workspaceID)
+            let viewModel = makeViewModel()
+
+            viewModel.presentCustomExpanded(reason: .hover)
+
+            XCTAssertEqual(viewModel.openedSize, CGSize(width: 620, height: 132))
+        }
+    }
+
+    func testClickedWorkspaceUsesCompactWorkbenchSize() async {
+        await MainActor.run {
+            LeftFeatureStore.shared.setExpandedActiveFeature(id: LeftFeature.workspaceID)
+            let viewModel = makeViewModel()
+
+            viewModel.presentCustomExpanded(reason: .click)
+
+            XCTAssertEqual(viewModel.openedSize, CGSize(width: 760, height: 500))
+        }
+    }
+
     func testClosedHeightUsesDetectedSystemNotchHeight() async {
         await MainActor.run {
             let viewModel = NotchViewModel(

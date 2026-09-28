@@ -1,78 +1,61 @@
-# 简屿
+# 简屿 · 灵动岛
 
 <p align="center">
-  <img src="TraeFlow/Assets.xcassets/AppIcon.appiconset/icon_256x256.png" width="128" alt="简屿图标">
+  <img src="TraeFlow/Assets.xcassets/AppIcon.appiconset/icon_256x256.png" width="128" alt="简屿 · 灵动岛图标">
 </p>
 
 <p align="center">
-  <b>贴在 Mac 顶部的桌面工作台：启动 App、刷抖音小窗、调用 AI Agent、管理需求与截图。</b>
+  <b>Mac 顶部的个人工作台与 AI 陪伴助手。</b><br>
+  待办、随笔、需求资料和日常工具集中在一座岛里。
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/macOS-14%2B-0A84FF?style=flat-square&logo=apple&logoColor=white" alt="macOS 14+">
-  <img src="https://img.shields.io/badge/Swift-SwiftUI-FA7343?style=flat-square&logo=swift&logoColor=white" alt="Swift / SwiftUI">
-  <img src="https://img.shields.io/badge/License-Apache%202.0-4F46E5?style=flat-square" alt="Apache 2.0">
+  macOS 14+ · Swift / SwiftUI · Apache 2.0
 </p>
 
-> 简屿目前处于个人开发与体验阶段，功能和界面仍会持续调整。欢迎 Star、Fork、提交 Issue。
+项目目前处于个人开发与体验阶段。应用名称仍为 `灵动岛.app`，源码中的 `TraeFlow`、`Dynamic` 名称保留用于兼容。
 
-## 功能预览
+## 当前功能
 
-### APP 管理
+### 今日工作台
 
-默认展示本机已安装的应用。双击直接启动，长按可隐藏，无需进入额外详情页。
+- **四列待办**：待处理、进行中、等待中、已完成；支持拖动任务、优先级和截止时间提醒。
+- **Markdown 随笔**：创建、搜索、重命名、编辑和归档，保存为本地文件。
+- **需求管理**：按「需求 PRD → 原型文档 → 测试验收 → 上线」组织阶段，每项需求自动建立独立目录，导入资料时复制到对应阶段。
+- **天气**：自动定位或手动设置城市，展示天气、降雨概率与带伞建议。
+- **录音与音乐**：快速录音、语音转写，并将文字转为待办或随笔；显示系统正在播放的音乐并提供播放控制。
+- **截图置顶**：`Control + Shift + S` 调起系统截图工具，支持区域、窗口、全屏截图和置顶查看。
 
-![APP 管理](docs/wechat-assets/01-app-management.png)
+工作台中的「AI 今日建议」目前根据待办与天气生成规则提示；完整模型对话通过 AI 入口使用。
 
-### 抖音与置顶小窗
+### AI 陪伴与记忆
 
-在主面板内使用桌面版抖音，保留搜索、分类和滚轮/触控板浏览；可切换为可移动的独立小窗，并默认保持置顶。关闭主面板或悬浮小窗时会暂停其中的视频和音频，避免后台继续播放。
+AI 入口打开原生陪伴工作区，提供陪伴、复盘、建议、知识问答四种模式，以及历史会话、记忆管理、资料库和模型调用记录。
 
-![抖音窗口](docs/wechat-assets/02-douyin.png)
+- **可管理的记忆**：根据「我叫」「我喜欢」「我的目标」「记住」等明确表达提取信息，保留来源、确认状态和冲突提示；可确认、修改、删除或添加禁止记忆规则。部分明确表达会自动确认。
+- **本地资料库**：导入文本、Markdown、可提取文字的 PDF 等文件，按当前问题检索片段并显示参考来源。单个文件上限 50 MB；扫描件 PDF 暂无 OCR，无法提取文字的文件仅保留原件与元数据。
+- **隐私空间**：使用 Touch ID 解锁，私密条目以 AES-GCM 加密，密钥保存在 macOS 钥匙串。该空间不参与当前的对话上下文检索；无可用生物识别的设备目前无法解锁。
+- **模型连接**：支持 Dify、DeepSeek、OpenAI 和兼容 Chat Completions 的服务，需自行填写 API 地址、模型与 API Key。模型可用性取决于对应服务。
+- **调用记录**：记录服务商、模型、时间、耗时、结果状态与输入字符数，不在此记录中保存对话正文或 API Key。
 
-![抖音悬浮小窗](docs/wechat-assets/03-douyin-floating.png)
+记忆提取与资料检索目前采用本地规则和文本匹配。使用远程模型时，对话及自动选入的记忆、资料片段会发送给所配置的服务商；“本地保存”不表示模型推理离线运行。
 
-### DeepSeek Harness
+### 抖音与悬浮小窗
 
-点击右上角 AI 入口后，直接启动并嵌入 DeepSeek 官方 Web UI，不再显示额外的 AI 工作区切换栏。可在 Harness 中选择模型和工作区、使用插件/工具并审批敏感操作。
+主面板内嵌抖音网页，也可打开可移动、置顶的独立小窗。关闭或切换离开相关面板时暂停媒体。网页登录、内容与可用性由第三方网站决定。
 
-![AI Agent](docs/wechat-assets/04-agent.png)
+### 开发者工作台与 TRAE 集成
 
-### 需求管理
+AI 侧栏中的「开发者工作台」保留 DeepSeek Harness 入口，首次使用通过 `npx` 下载并启动 `@deepseek-ai/dsh`，在本机 `127.0.0.1:3080` 嵌入 Web UI。Harness 的工作区、模型和工具权限由其自身管理。
 
-创建需求时自动建立独立文件夹和完整阶段目录：
+项目也保留 TRAE、TRAE CN、TRAE WORK、TRAE WORK CN 的 Hook 会话状态、跳回编辑器、桌面宠物与自定义功能区域等基础能力。
 
-```text
-需求 PRD → 原型文档 → 测试验收 → 上线
-```
+## 环境与运行
 
-上传文件会复制到当前需求对应的阶段文件夹中，并可按阶段推进、打开文件和确认上线。
-
-### 截图、监控与音乐
-
-- 截图支持区域、窗口和全屏模式，全局快捷键为 `Control + Shift + S`。
-- 截图结果可固定置顶，方便设计对照和资料摘录。
-- 监控提醒用于集中查看提醒和系统状态。
-- 音乐入口在主面板中加载 Apple Music 网页版。
-
-## 顶部导航
-
-```text
-APP 管理 → 需求管理 → 监控提醒 → 抖音 → 音乐                    AI
-```
-
-界面会针对带物理摄像头刘海的 Mac 调整导航位置，避免按钮被摄像头区域遮挡。点击面板外部区域即可收起。
-
-## 环境要求
-
-- macOS 14 或更高版本
-- Xcode（用于从源码构建）
-- Node.js 与 `npx`（仅在使用 DeepSeek Harness 时需要）
-- Apple Silicon 或 Intel Mac
-
-抖音、Apple Music、Dify、DeepSeek Harness 首次下载和其他 AI 模型服务需要网络连接；相关账户和 API 调用费用由对应服务提供方决定。
-
-## 从源码运行
+- macOS 14 或更高版本。
+- 从源码构建需要 Xcode，以及支持 Swift 6.1 的工具链（构建内置 Bridge 和运行 Prototype 测试使用）。
+- Node.js 与 `npx` 仅用于可选的 DeepSeek Harness。
+- AI 远程服务、天气和内嵌网页需要网络；服务账号和调用费用由相应提供方管理。
 
 ```bash
 git clone https://github.com/maomengen888-maker/trae-flow.git
@@ -80,9 +63,9 @@ cd trae-flow
 open TraeFlow.xcodeproj
 ```
 
-在 Xcode 中选择 `TraeFlow` Scheme 和 `My Mac`，然后点击 Run。构建后的应用名称为 `简屿.app`，Bundle ID 为 `ai.dynamic.app`。
+在 Xcode 中选择 `TraeFlow` Scheme 和 `My Mac` 后运行。Bundle ID 为 `ai.dynamic.app`。
 
-也可以使用命令行构建：
+也可在仓库根目录构建：
 
 ```bash
 xcodebuild \
@@ -93,32 +76,45 @@ xcodebuild \
   build
 ```
 
-首次使用截图、打开其他应用或系统集成功能时，macOS 可能请求相应权限，请根据实际需要授权。
+首次构建可能需要下载 Swift Package 依赖。运行时按实际使用功能授予定位、麦克风、语音识别、通知或系统控制权限。
 
-## 安全说明
+## 数据与隐私
 
-- 不要把 API Key 写进源码、截图、Issue 或提交记录。
-- `Config/LocalSecrets.xcconfig` 和本地构建目录已加入 `.gitignore`。
-- DeepSeek Harness 是官方开发者预览功能，会读写你在 Harness 内选择的工作区；请仔细检查工作区范围和每次操作审批。
-- 项目内嵌网页来自第三方服务，登录、内容和可用性受对应网站规则影响。
+- 需求文档、随笔、录音、截图和工作台索引保存在桌面的 `灵动岛` 文件夹。
+- 「立即备份」备份工作台、需求索引及提醒数据，不是全部附件、录音、AI 数据或钥匙串的完整备份。
+- AI 记忆、资料索引与非 Dify 会话历史保存在本机运行目录；这些普通数据文件未使用隐私空间的加密机制。Dify 历史会话由所配置的 Dify 服务管理。
+- API Key 保存在本机权限为 `0600` 的凭据文件中，不写入仓库。请勿将密钥、个人数据或诊断中的敏感内容提交到 GitHub。
+- 录音保存在本地；转写使用 Apple Speech 框架，当前未强制设备端识别，不能保证全程离线。
+- 截图默认保存在本机，只有点击上传操作后才发送到图床服务。
 
-## 项目背景与致谢
+详细数据流见 [隐私说明](docs/privacy-policy.md)。
 
-简屿基于 [ccsonicc333/trae-flow](https://github.com/ccsonicc333/trae-flow) 继续设计和开发。原项目专注于 TRAE 任务状态、Mac 灵动岛和自定义区域；本版本将产品方向扩展为桌面 App 入口、抖音小窗、AI Agent 与需求管理。
+## 开发与验证
 
-感谢原项目作者和所有开源贡献者。历史上的 `TraeFlow`、`Dynamic` 类型名与目录名为兼容原项目数据和结构而保留。
+[2026-09-28 验证记录](docs/verification-2026-09-28.md)：Debug 构建通过；定向单元测试 48 项通过、21 项失败，失败集中在 `NotchViewModelTests`，仍待处理。
 
-## 参与项目
+```bash
+# Prototype 逻辑与进程/Socket 测试
+swift test --package-path Prototype
 
-欢迎通过 Issue 提交：
+# 主应用单元测试
+xcodebuild -project TraeFlow.xcodeproj -scheme TraeFlow \
+  -configuration Debug CODE_SIGNING_ALLOWED=NO \
+  test -only-testing:TraeFlowTests
 
-- Bug 与兼容性问题
-- 新功能建议
-- UI/交互优化
-- AI 服务适配
-- 文档与测试改进
+# 完整回归（含 UI 测试）
+./scripts/test.sh
+```
 
-如果你的 Mac 顶部也有一座岛，你最想把什么放上去？
+UI 测试的执行可能需要可用的本机签名与 macOS 权限。发行流程及其当前限制见 [发布说明](docs/sparkle-release.md)；从源码构建不等同于已签名、公证的发行包。
+
+主要代码：`TraeFlow/` 为应用，`Prototype/` 为 SwiftPM Bridge 与测试，`TraeFlow/Services/Dynamic/` 为工作台和陪伴服务，`TraeFlow/UI/Views/DynamicAIAgentView.swift` 为 AI 界面。
+
+## 项目背景与参与
+
+简屿 · 灵动岛基于 [ccsonicc333/trae-flow](https://github.com/ccsonicc333/trae-flow) 继续设计与开发，在原项目的 Mac 灵动岛、TRAE 会话状态和自定义区域基础上，扩展个人工作台与 AI 陪伴功能。感谢原作者和开源贡献者。
+
+欢迎通过 [Issues](https://github.com/maomengen888-maker/trae-flow/issues) 提交问题与建议，通过 Pull Request 改进功能、文档和测试。报告问题时请附上 macOS 版本、复现步骤，并移除密钥和个人信息。
 
 ## License
 

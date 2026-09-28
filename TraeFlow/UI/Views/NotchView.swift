@@ -20,6 +20,57 @@ private let cornerRadiusInsets = (
 private let compactCenterContentInset: CGFloat = 14
 private let minimumClosedNotchFullContentWidth: CGFloat = 96
 
+/// 灵动岛打开态的高辨识度流动霓虹外边框。
+///
+/// 彩色渐变只沿外轮廓缓慢流动，背景保持纯黑；动效不读取音频，也不会申请录音权限。
+struct DynamicFluidBorder: View {
+    let topCornerRadius: CGFloat
+    let bottomCornerRadius: CGFloat
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    private let cycleDuration: TimeInterval = 16
+
+    var body: some View {
+        TimelineView(.animation(minimumInterval: reduceMotion ? 1 : 1 / 24)) { timeline in
+            let time = timeline.date.timeIntervalSinceReferenceDate
+            let progress = time.truncatingRemainder(dividingBy: cycleDuration) / cycleDuration
+            let angle = reduceMotion ? Angle.zero : .degrees(progress * 360)
+            let gradient = AngularGradient(
+                colors: [
+                    DynamicVisualTheme.cyan.opacity(0.98),
+                    DynamicVisualTheme.violet.opacity(0.92),
+                    DynamicVisualTheme.cyan.opacity(0.82),
+                    DynamicVisualTheme.orange.opacity(0.78),
+                    DynamicVisualTheme.cyan.opacity(0.98)
+                ],
+                center: .center,
+                angle: angle
+            )
+            let shape = NotchShape(
+                topCornerRadius: topCornerRadius,
+                bottomCornerRadius: bottomCornerRadius
+            )
+
+            ZStack {
+                shape
+                    .stroke(DynamicVisualTheme.cyan.opacity(0.28), lineWidth: 0.7)
+
+                shape
+                    .stroke(gradient, lineWidth: 4.5)
+                    .blur(radius: 7)
+                    .opacity(0.32)
+
+                shape
+                    .stroke(gradient, lineWidth: 1.45)
+                    .opacity(0.92)
+            }
+        }
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+}
+
 struct OpenedPanelContentHeightPreferenceKey: PreferenceKey {
     static var defaultValue: CGFloat = 0
 
@@ -604,13 +655,22 @@ struct NotchView: View {
             .frame(maxWidth: isOpened ? notchSize.width : nil, alignment: .top)
             .padding(.horizontal, horizontalInset)
             .padding([.horizontal, .bottom], isOpened ? 12 : 0)
-            .background(.black)
+            .background(DynamicVisualTheme.canvas)
             .clipShape(currentNotchShape)
             .overlay(alignment: .top) {
                 Rectangle()
-                    .fill(.black)
+                    .fill(DynamicVisualTheme.canvas)
                     .frame(height: 1)
                     .padding(.horizontal, topCornerRadius)
+            }
+            .overlay {
+                if isOpened {
+                    DynamicFluidBorder(
+                        topCornerRadius: topCornerRadius,
+                        bottomCornerRadius: bottomCornerRadius
+                    )
+                    .transition(.opacity)
+                }
             }
             .shadow(color: shadowColor, radius: 6)
             .frame(
@@ -717,10 +777,9 @@ struct NotchView: View {
     @ViewBuilder
     private var notchLayout: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Header row - always present, contains pet and spinner that persist across states
+            // 顶部导航始终保留；展开时由高层级窗口覆盖系统菜单栏按钮。
             headerRow
                 .frame(height: max(24, closedNotchSize.height))
-                // 保证原生顶栏在 WKWebView 合成层之上，AI 页面不得拦截导航点击。
                 .zIndex(100)
 
             // Main content only when opened
@@ -913,7 +972,7 @@ struct NotchView: View {
         switch feature.kind {
         case .music:
             MusicCompactView()
-        case .appManager, .requirementManager, .monitorReminders, .douyin, .shelf, .newsnow, .webURL:
+        case .workspace, .appManager, .requirementManager, .monitorReminders, .douyin, .shelf, .newsnow, .webURL:
             // 内置功能紧凑态仅显示图标
             FeatureIconView(feature: feature, size: 14)
                 .frame(width: 24, height: 24)
@@ -993,32 +1052,27 @@ struct NotchView: View {
         .frame(maxWidth: .infinity)
     }
 
-    /// 实体刘海屏：前四个入口放在刘海左侧，音乐单独放在右侧。
-    /// 46pt 的右侧留白使音乐中心与 APP 网格中的“词典”列基本对齐。
+    /// 实体刘海屏：工作台留在左侧，抖音与 AI 放在右侧，避开相机区域。
     private var physicalNotchAwareHeader: some View {
         ZStack(alignment: .leading) {
             if showsOpenedFeatureSwitcher {
                 LeftFeatureSwitcherBar(
                     onSelect: handleOpenedFeatureSelection,
                     showAllUnselected: viewModel.isAIAgentPresented || viewModel.contentType == .instances,
-                    featureIDs: Set([
-                        LeftFeature.appManagerID,
-                        LeftFeature.requirementManagerID,
-                        LeftFeature.monitorRemindersID,
-                        LeftFeature.douyinID
-                    ])
+                    featureIDs: Set([LeftFeature.workspaceID])
                 )
-
-                LeftFeatureSwitcherBar(
-                    onSelect: handleOpenedFeatureSelection,
-                    showAllUnselected: viewModel.isAIAgentPresented || viewModel.contentType == .instances,
-                    featureIDs: Set([LeftFeature.musicID])
-                )
-                .offset(x: physicalNotchMusicLeadingOffset)
             }
 
             HStack {
                 Spacer(minLength: 0)
+                if showsOpenedFeatureSwitcher {
+                    LeftFeatureSwitcherBar(
+                        onSelect: handleOpenedFeatureSelection,
+                        showAllUnselected: viewModel.isAIAgentPresented || viewModel.contentType == .instances,
+                        featureIDs: Set([LeftFeature.douyinID])
+                    )
+                    .fixedSize()
+                }
                 DynamicAIAgentButton(
                     isActive: viewModel.isAIAgentPresented,
                     action: toggleAIAgent
@@ -1053,10 +1107,6 @@ struct NotchView: View {
         viewModel.isAIAgentPresented
             || viewModel.contentType == .customExpanded
             || viewModel.contentType == .instances
-    }
-
-    private var physicalNotchMusicLeadingOffset: CGFloat {
-        (notchSize.width / 2) + (viewModel.deviceNotchRect.width / 2) + 46
     }
 
     private func handleOpenedFeatureSelection(_ featureID: String) {
@@ -1110,7 +1160,7 @@ struct NotchView: View {
             } else {
                 viewModel.presentCustomExpanded(reason: .click)
                 viewModel.openedSizeOverride = viewModel.clampedResizeSize(
-                    CGSize(width: 1100, height: 800)
+                    CGSize(width: 900, height: 650)
                 )
                 viewModel.isAIAgentPresented = true
             }
@@ -1929,16 +1979,27 @@ private struct DynamicAIAgentButton: View {
                 Text("AI")
             }
             .font(.system(size: 10, weight: .semibold))
-            .foregroundStyle(isHovering || isActive ? Color.black : Color.cyan)
+            .foregroundStyle(isHovering || isActive ? Color.white : DynamicVisualTheme.cyan)
             .padding(.horizontal, 9)
             .frame(height: 28)
             .background(
-                Capsule().fill(isHovering || isActive ? Color.white.opacity(0.95) : Color.cyan.opacity(0.12))
+                Capsule().fill(
+                    isHovering || isActive
+                        ? DynamicVisualTheme.elevatedCard
+                        : DynamicVisualTheme.card.opacity(0.86)
+                )
             )
-            .overlay(Capsule().strokeBorder(Color.cyan.opacity(0.35)))
+            .overlay(
+                Capsule().strokeBorder(
+                    isActive || isHovering
+                        ? DynamicVisualTheme.orange.opacity(0.96)
+                        : DynamicVisualTheme.cyan.opacity(0.54),
+                    lineWidth: isActive || isHovering ? 1.5 : 1
+                )
+            )
         }
         .buttonStyle(.plain)
-        .help(isActive ? "返回简屿" : "打开 AI Agent")
+        .help(isActive ? "返回灵动岛" : "打开 AI Agent")
         .onHover { isHovering = $0 }
     }
 }

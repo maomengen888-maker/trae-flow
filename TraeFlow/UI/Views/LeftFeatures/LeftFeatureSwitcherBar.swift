@@ -121,6 +121,15 @@ private struct FeatureSwitcherButton: View {
             .padding(.horizontal, 9)
             .frame(height: 28)
             .background(backgroundFill)
+            .overlay {
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .strokeBorder(
+                        isActive || isHovering
+                            ? DynamicVisualTheme.orange.opacity(0.94)
+                            : Color.white.opacity(0.07),
+                        lineWidth: isActive || isHovering ? 1.4 : 0.8
+                    )
+            }
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -139,8 +148,12 @@ private struct FeatureSwitcherButton: View {
 
     @ViewBuilder
     private var backgroundFill: some View {
-        RoundedRectangle(cornerRadius: 6)
-            .fill(isActive ? Color.accentColor : (isHovering ? Color.white.opacity(0.15) : Color.clear))
+        RoundedRectangle(cornerRadius: 10, style: .continuous)
+            .fill(
+                isActive
+                    ? DynamicVisualTheme.elevatedCard
+                    : (isHovering ? DynamicVisualTheme.card : Color.clear)
+            )
     }
 }
 

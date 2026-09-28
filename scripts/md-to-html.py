@@ -15,14 +15,13 @@ import sys
 import tempfile
 from pathlib import Path
 
-DOC = Path("/Users/telking/web/ccc/trae-flow/docs/trae-flow体验用例.md")
-OUT_HTML = Path("/Users/telking/web/ccc/trae-flow/docs/trae-flow体验用例.html")
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+DOC = PROJECT_ROOT / "docs" / "trae-flow体验用例.md"
+OUT_HTML = DOC.with_suffix(".html")
 
 # 匹配 markdown 图片语法 ![alt](docs/images/xxx.png)
 # group(1) = alt, group(2) = 相对路径
 IMG_PATTERN = re.compile(r'!\[([^\]]*)\]\((docs/images/[^)]+)\)')
-
-PROJECT_ROOT = Path("/Users/telking/web/ccc/trae-flow")
 
 IMAGE_META = {
     0: ("Gatekeeper 拦截解决方法", "图 1：Gatekeeper 拦截时在「隐私与安全性」点击「仍要打开」", "70%"),
@@ -233,7 +232,7 @@ def main():
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>简屿 体验用例</title>
+<title>灵动岛 体验用例</title>
 <style>
   :root {{
     --primary: #0A84FF;

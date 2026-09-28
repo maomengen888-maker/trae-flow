@@ -39,7 +39,15 @@ for arch in "${archs[@]}"; do
     --triple "$arch-apple-macosx$DEPLOYMENT_TARGET" \
     --disable-sandbox
 
-  bridge_path=$(find "$arch_scratch_path" -type f -path "*/$BUILD_CONFIGURATION/$PRODUCT_NAME" | head -n 1)
+  bridge_bin_path=$(xcrun swift build \
+    --package-path "$PACKAGE_PATH" \
+    --product "$PRODUCT_NAME" \
+    --configuration "$BUILD_CONFIGURATION" \
+    --scratch-path "$arch_scratch_path" \
+    --triple "$arch-apple-macosx$DEPLOYMENT_TARGET" \
+    --disable-sandbox \
+    --show-bin-path)
+  bridge_path="$bridge_bin_path/$PRODUCT_NAME"
   if [[ -z "$bridge_path" || ! -x "$bridge_path" ]]; then
     echo "error: Failed to build $PRODUCT_NAME for $arch" >&2
     exit 1

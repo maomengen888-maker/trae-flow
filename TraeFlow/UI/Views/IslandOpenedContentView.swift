@@ -84,8 +84,10 @@ struct IslandOpenedContentView: View {
                 viewModel: viewModel
             )
         case .customExpanded:
-            // Spec: 展开态左半区功能容器，由 LeftFeatureContainerView 分发到音乐/中转站/自定义 HTML
-            LeftFeatureContainerView()
+            LeftFeatureContainerView(
+                isCompactPreview: trigger == .hover,
+                onModalInteractionStateChanged: { viewModel.setInlineTextInputActive($0) }
+            )
         }
     }
 

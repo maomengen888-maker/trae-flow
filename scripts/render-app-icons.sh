@@ -10,7 +10,7 @@ usage() {
   cat <<'EOF'
 Usage: render-app-icons.sh [--source <svg-path>] [--output-dir <path>]
 
-Regenerates the macOS AppIcon asset set from the 简屿 SVG source.
+Regenerates the macOS AppIcon asset set from the 灵动岛 SVG source.
 The export intentionally preserves SVG transparency so the rounded corners
 stay transparent instead of being baked onto a white canvas.
 EOF

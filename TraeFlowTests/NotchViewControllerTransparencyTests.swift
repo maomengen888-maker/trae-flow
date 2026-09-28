@@ -4,6 +4,11 @@ import XCTest
 
 @MainActor
 final class NotchViewControllerTransparencyTests: XCTestCase {
+    func testExpandedLevelCoversMenuBarButLeavesPopupWindowsAbove() {
+        XCTAssertGreaterThan(NotchPanel.expandedLevel.rawValue, NSWindow.Level.mainMenu.rawValue)
+        XCTAssertLessThan(NotchPanel.expandedLevel.rawValue, NSWindow.Level.popUpMenu.rawValue)
+    }
+
     func testPassThroughHostingViewStaysTransparent() throws {
         let viewModel = NotchViewModel(
             deviceNotchRect: .zero,

@@ -357,7 +357,7 @@ final class DynamicDifyChatStore: ObservableObject {
         } catch { errorMessage = userFacingError(error) }
     }
 
-    func send(_ rawText: String) {
+    func send(_ rawText: String, systemContext: String? = nil) {
         let text = rawText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty, !isSending, let configuration = configuration() else { return }
 
@@ -374,32 +374,163 @@ final class DynamicDifyChatStore: ObservableObject {
         activityText = "正在思考…"
         errorMessage = nil
         let conversationID = selectedConversationID ?? ""
+        let startedAt = Date()
+        let auditInputCharacters = text.count + (systemContext?.count ?? 0)
 
         sendTask = Task { [weak self] in
             guard let self else { return }
             do {
                 if configuration.provider == .dify {
-                    try await self.streamDifyMessage(text, conversationID: conversationID, assistantMessageID: assistantMessageID, configuration: configuration)
+                    try await self.streamDifyMessage(
+                        text,
+                        conversationID: conversationID,
+                        assistantMessageID: assistantMessageID,
+                        systemContext: systemContext,
+                        configuration: configuration
+                    )
                 } else {
-                    try await self.streamCompatibleMessage(assistantMessageID: assistantMessageID, configuration: configuration)
+                    try await self.streamCompatibleMessage(
+                        assistantMessageID: assistantMessageID,
+                        systemContext: systemContext,
+                        configuration: configuration
+                    )
                 }
                 self.finishStreamingMessage(id: assistantMessageID)
                 if configuration.provider != .dify { self.persistCurrentLocalConversation(configuration: configuration) }
                 self.activityText = nil
                 self.isSending = false
+                DynamicAIAuditStore.shared.record(
+                    conversationID: self.selectedConversationID,
+                    provider: configuration.provider.displayName,
+                    model: configuration.model,
+                    startedAt: startedAt,
+                    outcome: "success",
+                    inputCharacters: auditInputCharacters
+                )
                 await self.refreshConversations()
             } catch is CancellationError {
                 self.finishStreamingMessage(id: assistantMessageID)
                 if configuration.provider != .dify { self.persistCurrentLocalConversation(configuration: configuration) }
                 self.activityText = nil
                 self.isSending = false
+                DynamicAIAuditStore.shared.record(
+                    conversationID: self.selectedConversationID,
+                    provider: configuration.provider.displayName,
+                    model: configuration.model,
+                    startedAt: startedAt,
+                    outcome: "cancelled",
+                    inputCharacters: auditInputCharacters
+                )
             } catch {
                 self.finishStreamingMessage(id: assistantMessageID)
                 if configuration.provider != .dify { self.persistCurrentLocalConversation(configuration: configuration) }
                 self.activityText = nil
                 self.isSending = false
                 self.errorMessage = self.userFacingError(error)
+                DynamicAIAuditStore.shared.record(
+                    conversationID: self.selectedConversationID,
+                    provider: configuration.provider.displayName,
+                    model: configuration.model,
+                    startedAt: startedAt,
+                    outcome: "failed",
+                    inputCharacters: auditInputCharacters
+                )
             }
+        }
+    }
+
+    func appendLocalSafetyResponse(userText: String, response: String) {
+        if selectedConversationID == nil { selectedConversationID = UUID().uuidString }
+        let now = Date()
+        messages.append(DynamicAIChatMessage(
+            id: UUID().uuidString,
+            role: .user,
+            text: userText,
+            createdAt: now,
+            isStreaming: false
+        ))
+        messages.append(DynamicAIChatMessage(
+            id: UUID().uuidString,
+            role: .assistant,
+            text: response,
+            createdAt: now.addingTimeInterval(0.001),
+            isStreaming: false
+        ))
+        if isAPIKeyConfigured,
+           let configuration = configuration(),
+           configuration.provider != .dify {
+            persistCurrentLocalConversation(configuration: configuration)
+            Task { await refreshConversations() }
+        }
+    }
+
+    func renameConversation(_ id: String, name rawName: String) async {
+        let name = rawName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty, let configuration = configuration() else { return }
+
+        if configuration.provider != .dify {
+            var saved = loadLocalConversations()
+            guard let index = saved.firstIndex(where: { $0.conversation.id == id }) else { return }
+            let old = saved[index]
+            saved[index] = LocalConversation(
+                conversation: DynamicAIConversation(
+                    id: old.conversation.id,
+                    name: String(name.prefix(60)),
+                    createdAt: old.conversation.createdAt,
+                    updatedAt: Date()
+                ),
+                provider: old.provider,
+                model: old.model,
+                messages: old.messages
+            )
+            persistLocalConversations(saved)
+            await refreshConversations()
+            return
+        }
+
+        do {
+            var request = authorizedRequest(
+                url: configuration.baseURL.appendingPathComponent("conversations/\(id)/name"),
+                configuration: configuration
+            )
+            request.httpMethod = "POST"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.httpBody = try JSONSerialization.data(withJSONObject: [
+                "name": String(name.prefix(60)), "auto_generate": false, "user": endUserID
+            ])
+            let (data, response) = try await URLSession.shared.data(for: request)
+            try validate(response: response, body: data, provider: configuration.provider)
+            await refreshConversations()
+        } catch {
+            errorMessage = userFacingError(error)
+        }
+    }
+
+    func deleteConversation(_ id: String) async {
+        guard let configuration = configuration() else { return }
+        if configuration.provider != .dify {
+            var saved = loadLocalConversations()
+            saved.removeAll { $0.conversation.id == id }
+            persistLocalConversations(saved)
+            if selectedConversationID == id { startNewConversation() }
+            await refreshConversations()
+            return
+        }
+
+        do {
+            var request = authorizedRequest(
+                url: configuration.baseURL.appendingPathComponent("conversations/\(id)"),
+                configuration: configuration
+            )
+            request.httpMethod = "DELETE"
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.httpBody = try JSONSerialization.data(withJSONObject: ["user": endUserID])
+            let (data, response) = try await URLSession.shared.data(for: request)
+            try validate(response: response, body: data, provider: configuration.provider)
+            if selectedConversationID == id { startNewConversation() }
+            await refreshConversations()
+        } catch {
+            errorMessage = userFacingError(error)
         }
     }
 
@@ -412,6 +543,7 @@ final class DynamicDifyChatStore: ObservableObject {
         _ text: String,
         conversationID: String,
         assistantMessageID: String,
+        systemContext: String?,
         configuration: Configuration
     ) async throws {
         var request = authorizedRequest(url: configuration.baseURL.appendingPathComponent("chat-messages"), configuration: configuration)
@@ -419,8 +551,9 @@ final class DynamicDifyChatStore: ObservableObject {
         request.timeoutInterval = 300
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("text/event-stream", forHTTPHeaderField: "Accept")
+        let inputs: [String: String] = systemContext.map { ["jianyu_context": $0] } ?? [:]
         request.httpBody = try JSONSerialization.data(withJSONObject: [
-            "inputs": [:], "query": text, "response_mode": "streaming",
+            "inputs": inputs, "query": text, "response_mode": "streaming",
             "conversation_id": conversationID, "user": endUserID,
             "files": [], "auto_generate_name": true
         ])
@@ -456,7 +589,11 @@ final class DynamicDifyChatStore: ObservableObject {
         }
     }
 
-    private func streamCompatibleMessage(assistantMessageID: String, configuration: Configuration) async throws {
+    private func streamCompatibleMessage(
+        assistantMessageID: String,
+        systemContext: String?,
+        configuration: Configuration
+    ) async throws {
         var request = authorizedRequest(
             url: configuration.baseURL.appendingPathComponent("chat/completions"),
             configuration: configuration
@@ -466,9 +603,13 @@ final class DynamicDifyChatStore: ObservableObject {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("text/event-stream", forHTTPHeaderField: "Accept")
 
-        let chatMessages = messages
+        var chatMessages: [[String: String]] = []
+        if let systemContext, !systemContext.isEmpty {
+            chatMessages.append(["role": "system", "content": systemContext])
+        }
+        chatMessages.append(contentsOf: messages
             .filter { !$0.text.isEmpty }
-            .map { ["role": $0.role.rawValue, "content": $0.text] }
+            .map { ["role": $0.role.rawValue, "content": $0.text] })
         request.httpBody = try JSONSerialization.data(withJSONObject: [
             "model": configuration.model,
             "messages": chatMessages,
@@ -581,14 +722,19 @@ final class DynamicDifyChatStore: ObservableObject {
         )
         saved.removeAll { $0.conversation.id == id }
         saved.append(local)
+        persistLocalConversations(saved)
+    }
+
+    private func persistLocalConversations(_ conversations: [LocalConversation]) {
         do {
             try FileManager.default.createDirectory(
                 at: localConversationsURL.deletingLastPathComponent(),
-                withIntermediateDirectories: true
+                withIntermediateDirectories: true,
+                attributes: [.posixPermissions: 0o700]
             )
             let encoder = JSONEncoder()
             encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-            try encoder.encode(saved).write(to: localConversationsURL, options: .atomic)
+            try encoder.encode(conversations).write(to: localConversationsURL, options: .atomic)
         } catch {
             errorMessage = "本地会话保存失败：\(error.localizedDescription)"
         }

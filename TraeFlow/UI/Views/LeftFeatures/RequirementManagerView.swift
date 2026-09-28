@@ -2,6 +2,7 @@ import AppKit
 import SwiftUI
 
 struct RequirementManagerView: View {
+    var onModalInteractionStateChanged: (Bool) -> Void = { _ in }
     @ObservedObject private var store = RequirementManagementStore.shared
     @State private var selectedStage: RequirementLifecycleStage = .prd
     @State private var isAddingRequirement = false
@@ -24,10 +25,18 @@ struct RequirementManagerView: View {
             }
         }
         .padding(16)
-        .background(dynamicBackground)
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .background(DynamicVisualTheme.canvasGradient)
+        .dynamicSurface(radius: DynamicVisualTheme.outerRadius, neonBorder: true)
         .sheet(isPresented: $isAddingRequirement) {
             addRequirementSheet
+        }
+        .onChange(of: isAddingRequirement) { _, isPresented in
+            onModalInteractionStateChanged(isPresented)
+        }
+        .onDisappear {
+            if isAddingRequirement {
+                onModalInteractionStateChanged(false)
+            }
         }
         .alert(
             "将文件移到废纸篓？",
@@ -64,7 +73,7 @@ struct RequirementManagerView: View {
                     Image(systemName: "plus")
                 }
                 .buttonStyle(.plain)
-                .foregroundStyle(.cyan)
+                .foregroundStyle(DynamicVisualTheme.cyan)
             }
             .padding(.horizontal, 8)
 
@@ -79,7 +88,7 @@ struct RequirementManagerView: View {
                             VStack(alignment: .leading, spacing: 6) {
                                 Text(requirement.code)
                                     .font(.system(size: 10, weight: .medium, design: .monospaced))
-                                    .foregroundStyle(.cyan)
+                                    .foregroundStyle(DynamicVisualTheme.cyan)
                                 Text(requirement.title)
                                     .font(.system(size: 12, weight: .medium))
                                     .foregroundStyle(.white.opacity(0.92))
@@ -94,20 +103,10 @@ struct RequirementManagerView: View {
                             }
                             .padding(10)
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            .background(
-                                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                    .fill(store.selectedRequirementID == requirement.id
-                                          ? Color.cyan.opacity(0.13)
-                                          : Color.white.opacity(0.035))
-                                    .overlay {
-                                        RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                            .strokeBorder(
-                                                store.selectedRequirementID == requirement.id
-                                                    ? Color.cyan.opacity(0.36)
-                                                    : Color.white.opacity(0.06),
-                                                lineWidth: 1
-                                            )
-                                    }
+                            .dynamicSurface(
+                                radius: DynamicVisualTheme.cardRadius,
+                                focused: store.selectedRequirementID == requirement.id,
+                                elevated: store.selectedRequirementID == requirement.id
                             )
                         }
                         .buttonStyle(.plain)
@@ -116,8 +115,7 @@ struct RequirementManagerView: View {
             }
         }
         .padding(12)
-        .background(panelBackground)
-        .clipShape(RoundedRectangle(cornerRadius: 13, style: .continuous))
+        .dynamicSurface(radius: DynamicVisualTheme.panelRadius)
     }
 
     private func requirementWorkspace(_ requirement: ManagedRequirement) -> some View {
@@ -126,7 +124,7 @@ struct RequirementManagerView: View {
                 VStack(alignment: .leading, spacing: 5) {
                     Text(requirement.code)
                         .font(.system(size: 10, design: .monospaced))
-                        .foregroundStyle(.cyan)
+                        .foregroundStyle(DynamicVisualTheme.cyan)
                     Text(requirement.title)
                         .font(.system(size: 18, weight: .semibold, design: .rounded))
                     Text(requirement.details)
@@ -137,7 +135,7 @@ struct RequirementManagerView: View {
                 Spacer()
                 Text(requirement.isLaunched ? "已上线" : "\(requirement.currentStage.title)中")
                     .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(requirement.isLaunched ? Color.green : Color.cyan)
+                    .foregroundStyle(requirement.isLaunched ? Color.green : DynamicVisualTheme.cyan)
                     .padding(.horizontal, 9)
                     .padding(.vertical, 5)
                     .background(Capsule().fill(Color.white.opacity(0.05)))
@@ -168,7 +166,7 @@ struct RequirementManagerView: View {
                         Label(isChoosingDocuments ? "等待选择…" : "上传文档", systemImage: "arrow.up.doc")
                     }
                     .buttonStyle(.bordered)
-                    .tint(.cyan)
+                    .tint(DynamicVisualTheme.cyan)
                     .disabled(isChoosingDocuments)
 
                     if selectedStage == requirement.currentStage, !requirement.isLaunched {
@@ -177,7 +175,7 @@ struct RequirementManagerView: View {
                             selectedStage = store.selectedRequirement?.currentStage ?? selectedStage
                         }
                         .buttonStyle(.borderedProminent)
-                        .tint(.cyan)
+                        .tint(DynamicVisualTheme.orange)
                     }
                 }
 
@@ -203,10 +201,10 @@ struct RequirementManagerView: View {
                         .foregroundStyle(.white.opacity(0.84))
                     Text("\(documents.count)")
                         .font(.system(size: 9, weight: .medium, design: .rounded))
-                        .foregroundStyle(.cyan)
+                        .foregroundStyle(DynamicVisualTheme.cyan)
                         .padding(.horizontal, 7)
                         .padding(.vertical, 2)
-                        .background(Capsule().fill(Color.cyan.opacity(0.12)))
+                        .background(Capsule().fill(DynamicVisualTheme.cyan.opacity(0.12)))
                     Spacer()
                 }
 
@@ -214,7 +212,7 @@ struct RequirementManagerView: View {
                     VStack(spacing: 8) {
                         Image(systemName: "arrow.up.doc")
                             .font(.system(size: 25, weight: .light))
-                            .foregroundStyle(.cyan.opacity(0.7))
+                            .foregroundStyle(DynamicVisualTheme.cyan.opacity(0.7))
                         Text("该阶段还没有文档")
                             .font(.system(size: 11))
                             .foregroundStyle(.secondary)
@@ -239,7 +237,7 @@ struct RequirementManagerView: View {
                                     } label: {
                                         HStack(spacing: 10) {
                                             Image(systemName: documentIcon(for: document.name))
-                                                .foregroundStyle(.cyan)
+                                                .foregroundStyle(DynamicVisualTheme.cyan)
                                                 .frame(width: 18)
                                             VStack(alignment: .leading, spacing: 3) {
                                                 Text(document.name)
@@ -273,7 +271,7 @@ struct RequirementManagerView: View {
                                     .help("删除文件")
                                 }
                                 .padding(8)
-                                .background(Color.white.opacity(0.035), in: RoundedRectangle(cornerRadius: 9))
+                                .dynamicSurface(radius: DynamicVisualTheme.cardRadius, elevated: true)
                             }
                         }
                     }
@@ -281,12 +279,10 @@ struct RequirementManagerView: View {
             }
             .padding(14)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-            .background(panelBackground)
-            .clipShape(RoundedRectangle(cornerRadius: 13, style: .continuous))
+            .dynamicSurface(radius: DynamicVisualTheme.panelRadius)
         }
         .padding(16)
-        .background(panelBackground)
-        .clipShape(RoundedRectangle(cornerRadius: 13, style: .continuous))
+        .dynamicSurface(radius: DynamicVisualTheme.panelRadius)
     }
 
     private func lifecycleBar(_ requirement: ManagedRequirement) -> some View {
@@ -309,17 +305,14 @@ struct RequirementManagerView: View {
                             .font(.system(size: 11, weight: .medium))
                         Text(complete ? "已完成" : (current ? "进行中" : "待开始"))
                             .font(.system(size: 9))
-                            .foregroundStyle(complete ? Color.green : (current ? Color.cyan : Color.secondary))
+                            .foregroundStyle(complete ? Color.green : (current ? DynamicVisualTheme.cyan : Color.secondary))
                     }
                     .padding(10)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(
-                        RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .fill(selectedStage == stage ? Color.cyan.opacity(0.12) : Color.white.opacity(0.03))
-                            .overlay {
-                                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                    .strokeBorder(selectedStage == stage ? Color.cyan.opacity(0.38) : Color.white.opacity(0.06))
-                            }
+                    .dynamicSurface(
+                        radius: DynamicVisualTheme.cardRadius,
+                        focused: selectedStage == stage,
+                        elevated: selectedStage == stage
                     )
                 }
                 .buttonStyle(.plain)
@@ -357,6 +350,8 @@ struct RequirementManagerView: View {
         }
         .padding(22)
         .frame(width: 460)
+        .background(DynamicVisualTheme.canvasGradient)
+        .dynamicSurface(radius: DynamicVisualTheme.outerRadius, neonBorder: true)
     }
 
     private func chooseDocuments(for requirement: ManagedRequirement, stage: RequirementLifecycleStage) {
@@ -381,18 +376,6 @@ struct RequirementManagerView: View {
                 store.importDocuments(panel.urls, requirementID: requirement.id, stage: stage)
             }
         }
-    }
-
-    private var dynamicBackground: some View {
-        LinearGradient(
-            colors: [Color(red: 0.02, green: 0.04, blue: 0.08), Color(red: 0.04, green: 0.07, blue: 0.13)],
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
-    }
-
-    private var panelBackground: some View {
-        Color(red: 0.035, green: 0.065, blue: 0.115).opacity(0.94)
     }
 
     private func documentIcon(for fileName: String) -> String {

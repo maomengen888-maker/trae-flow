@@ -182,48 +182,21 @@ final class LeftFeatureStore: ObservableObject {
         // 设置较小的默认展开高度，避免展开时占用过多屏幕空间
         features = [
             LeftFeature(
-                id: LeftFeature.appManagerID,
-                kind: .appManager,
+                id: LeftFeature.workspaceID,
+                kind: .workspace,
                 isEnabled: true,
                 sortOrder: 0,
-                expandedWidth: 900,
-                expandedHeight: 620,
-                expandedPinned: false
-            ),
-            LeftFeature(
-                id: LeftFeature.requirementManagerID,
-                kind: .requirementManager,
-                isEnabled: true,
-                sortOrder: 1,
-                expandedWidth: 980,
-                expandedHeight: 680,
-                expandedPinned: false
-            ),
-            LeftFeature(
-                id: LeftFeature.monitorRemindersID,
-                kind: .monitorReminders,
-                isEnabled: true,
-                sortOrder: 2,
-                expandedWidth: 860,
-                expandedHeight: 600,
+                expandedWidth: 760,
+                expandedHeight: 500,
                 expandedPinned: false
             ),
             LeftFeature(
                 id: LeftFeature.douyinID,
                 kind: .douyin,
                 isEnabled: true,
-                sortOrder: 3,
+                sortOrder: 1,
                 expandedWidth: 980,
                 expandedHeight: 760,
-                expandedPinned: false
-            ),
-            LeftFeature(
-                id: LeftFeature.musicID,
-                kind: .music,
-                isEnabled: true,
-                sortOrder: 4,
-                expandedWidth: 900,
-                expandedHeight: 620,
                 expandedPinned: false
             )
         ]
@@ -292,17 +265,14 @@ final class LeftFeatureStore: ObservableObject {
         if didChange { persist() }
     }
 
-    /// Dynamic 的五个核心模块。首次升级时停用旧功能并固定顺序：
-    /// APP 管理 → 需求管理 → 监控提醒 → 抖音 → 音乐。
+    /// 灵动岛核心布局：今日工作台 + 抖音。
+    /// 需求、提醒、音乐和 AI 均收入工作台，不再单独占据顶部入口。
     private func ensureDynamicCoreFeatures() {
         let migrationKey = "dynamicCoreFeaturesVersion"
-        let targetVersion = 3
+        let targetVersion = 7
         let coreDefinitions: [(id: String, kind: LeftFeatureKind, order: Int, width: Double, height: Double)] = [
-            (LeftFeature.appManagerID, .appManager, 0, 900, 620),
-            (LeftFeature.requirementManagerID, .requirementManager, 1, 980, 680),
-            (LeftFeature.monitorRemindersID, .monitorReminders, 2, 860, 600),
-            (LeftFeature.douyinID, .douyin, 3, 980, 760),
-            (LeftFeature.musicID, .music, 4, 900, 620)
+            (LeftFeature.workspaceID, .workspace, 0, 760, 500),
+            (LeftFeature.douyinID, .douyin, 1, 980, 760)
         ]
 
         var didChange = false
@@ -319,7 +289,7 @@ final class LeftFeatureStore: ObservableObject {
             didChange = true
         }
 
-        // 每次启动都强制保持 Dynamic 的唯一五页布局，避免旧 TRAE 功能或
+        // 每次启动都强制保持工作台 + 抖音的精简布局，避免旧 TRAE 功能或
         // 自定义演示因为历史缓存再次出现在顶部。
         let coreIDs = Set(coreDefinitions.map { $0.id })
         for index in features.indices {
@@ -344,11 +314,11 @@ final class LeftFeatureStore: ObservableObject {
             }
         }
 
-        if compactFeatureID != LeftFeature.appManagerID {
-            compactFeatureID = LeftFeature.appManagerID
+        if compactFeatureID != LeftFeature.workspaceID {
+            compactFeatureID = LeftFeature.workspaceID
         }
-        if expandedActiveFeatureID != LeftFeature.appManagerID {
-            expandedActiveFeatureID = LeftFeature.appManagerID
+        if expandedActiveFeatureID != LeftFeature.workspaceID {
+            expandedActiveFeatureID = LeftFeature.workspaceID
         }
 
         if defaults.integer(forKey: migrationKey) < targetVersion {

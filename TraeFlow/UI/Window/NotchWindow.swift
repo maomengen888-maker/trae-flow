@@ -15,7 +15,8 @@ import AppKit
 // Use NSPanel subclass for non-activating behavior
 class NotchPanel: NSPanel {
     static let compactLevel = NSWindow.Level(rawValue: 151)
-    static let expandedLevel = NSWindow.Level.floating
+    /// Above macOS menu-bar items, below pop-up/input-method windows.
+    static let expandedLevel = NSWindow.Level(rawValue: 50)
 
     override init(
         contentRect: NSRect,

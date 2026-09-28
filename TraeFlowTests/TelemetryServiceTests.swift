@@ -1,11 +1,14 @@
 import XCTest
 @testable import TRAE_FLOW
 
-actor RecordingTelemetrySink: TelemetrySink {
+@MainActor
+final class RecordingTelemetrySink: TelemetrySink {
     private var batches: [[TelemetryRecord]] = []
 
-    func send(_ records: [TelemetryRecord], configuration _: TelemetryConfiguration) async throws {
-        batches.append(records)
+    nonisolated func send(_ records: [TelemetryRecord], configuration _: TelemetryConfiguration) async throws {
+        await MainActor.run {
+            batches.append(records)
+        }
     }
 
     func sentRecords() -> [TelemetryRecord] {

@@ -110,6 +110,7 @@ struct EditableCustomAreaView: View {
         case .newsnow: defaultName = "热点新闻"
         case .mineradio: defaultName = "Mineradio"
         case .douyin: defaultName = "抖音"
+        case .workspace: defaultName = "今日"
         default: defaultName = ""
         }
         _name = State(initialValue: feature.customDisplayName ?? defaultName)
@@ -438,6 +439,7 @@ struct EditableCustomAreaView: View {
             case .newsnow: defaultName = "热点新闻"
             case .mineradio: defaultName = "Mineradio"
             case .douyin: defaultName = "抖音"
+            case .workspace: defaultName = "今日"
             default: defaultName = ""
             }
             updated.customDisplayName = (trimmedName == defaultName || trimmedName.isEmpty) ? nil : trimmedName

@@ -223,6 +223,12 @@ class NotchViewModel: ObservableObject {
         let resolvedOpenReason: NotchOpenReason = style == .detached ? .click : openReason
         let resolvedMeasuredHeight: CGFloat? = style == .detached ? detachedOpenedMeasuredHeight : openedMeasuredHeight
 
+        if style == .docked,
+           resolvedOpenReason == .hover,
+           case .customExpanded = resolvedContentType {
+            return CGSize(width: min(maximumDockedContentWidth, 620), height: 132)
+        }
+
         switch resolvedContentType {
         case .chat, .customExpanded:
             // Spec 2.4: 自定义内容全屏面板采用与会话详情一致的尺寸
@@ -698,7 +704,10 @@ class NotchViewModel: ObservableObject {
 
     private func handleMouseDown(_ event: NSEvent) {
         // Flow 岛始终保持交互：宠物分离态下点击 docked 窗口仍可展开/关闭
-        guard presentationMode != .detached || status != .opened || !isInlineTextInputActive else { return }
+        // SwiftUI 的 sheet / Picker 会使用独立的系统窗口承载输入与菜单。
+        // 表单交互期间，这些合法点击可能落在 Flow 岛主面板几何范围之外，
+        // 不能据此把整个面板收起。
+        guard status != .opened || !isInlineTextInputActive else { return }
 
         if isSettingsPopoverPresented {
             return
@@ -733,7 +742,7 @@ class NotchViewModel: ObservableObject {
             if presentationMode == .docked, detachmentTriggerScreenRect.contains(location) {
                 beginDockedDetachmentTracking(source: .closed, startLocation: location)
             } else if isPointInHoverTrigger(location) {
-                LeftFeatureStore.shared.setExpandedActiveFeature(id: LeftFeature.appManagerID)
+                LeftFeatureStore.shared.setExpandedActiveFeature(id: LeftFeature.workspaceID)
                 presentCustomExpanded()
             }
         }
@@ -840,7 +849,7 @@ class NotchViewModel: ObservableObject {
             // 关闭态下没有触发分离手势的点击/抬起视为展开面板。
             // 不再要求 mouseUp 必须落在 closedScreenRect 内，也不检查轻微移动，
             // 避免正常点击因手抖或高 DPI 下的微小位移而无法展开。
-            LeftFeatureStore.shared.setExpandedActiveFeature(id: LeftFeature.appManagerID)
+            LeftFeatureStore.shared.setExpandedActiveFeature(id: LeftFeature.workspaceID)
             presentCustomExpanded()
         } else if tracking.source == .opened,
                   !tracking.isLongPressSatisfied,
@@ -1015,7 +1024,7 @@ class NotchViewModel: ObservableObject {
     func performDeferredHoverOpenIfNeeded() {
         guard isHovering else { return }
         guard status == .closed || status == .popping else { return }
-        LeftFeatureStore.shared.setExpandedActiveFeature(id: LeftFeature.appManagerID)
+        LeftFeatureStore.shared.setExpandedActiveFeature(id: LeftFeature.workspaceID)
         presentCustomExpanded(reason: .hover)
     }
 
@@ -1035,7 +1044,7 @@ class NotchViewModel: ObservableObject {
         status = .closed
         currentChatSession = nil
         isAIAgentPresented = false
-        LeftFeatureStore.shared.setExpandedActiveFeature(id: LeftFeature.appManagerID)
+        LeftFeatureStore.shared.setExpandedActiveFeature(id: LeftFeature.workspaceID)
         contentType = .customExpanded
         openedMeasuredHeight = nil
         isInlineTextInputActive = false
@@ -1143,17 +1152,17 @@ class NotchViewModel: ObservableObject {
     /// Approval cards should take priority over the underlying session detail view.
     func presentNotificationAttention() {
         currentChatSession = nil
-        LeftFeatureStore.shared.setExpandedActiveFeature(id: LeftFeature.appManagerID)
+        LeftFeatureStore.shared.setExpandedActiveFeature(id: LeftFeature.workspaceID)
         contentType = .customExpanded
         openedMeasuredHeight = nil
         notchOpen(reason: .notification)
     }
 
-    /// Dynamic 不展示旧会话列表；所有返回动作统一回到 APP 管理。
+    /// 灵动岛不展示旧会话列表；所有返回动作统一回到今日工作台。
     func exitChat() {
         currentChatSession = nil
         isAIAgentPresented = false
-        LeftFeatureStore.shared.setExpandedActiveFeature(id: LeftFeature.appManagerID)
+        LeftFeatureStore.shared.setExpandedActiveFeature(id: LeftFeature.workspaceID)
         contentType = .customExpanded
         openedMeasuredHeight = nil
     }

@@ -259,11 +259,8 @@ class NotchWindowController: NSWindowController {
             window.level = NotchPanel.compactLevel
             window.ignoresMouseEvents = true
         case .opened:
-            // APP/需求/监控页面保持置顶；AI 输入页降低层级，确保中文输入法
-            // 候选窗与文件选择器显示在 Dynamic 上方。
-            window.level = viewModel.isAIAgentPresented
-                ? NotchPanel.expandedLevel
-                : NotchPanel.compactLevel
+            // 展开导航覆盖系统菜单栏，但仍低于输入法候选窗与系统弹出菜单。
+            window.level = NotchPanel.expandedLevel
             break // dynamic management handles ignoresMouseEvents
         }
     }

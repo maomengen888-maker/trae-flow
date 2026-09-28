@@ -195,7 +195,7 @@ struct DeepSeekHarnessView: View {
                 launchState(
                     icon: "shippingbox.fill",
                     title: "DeepSeek 官方 Harness",
-                    description: "在简屿的 AI 界面内启动官方 Web UI，统一管理模型、工作区、插件、工具与操作审批。",
+                    description: "在灵动岛的 AI 界面内启动官方 Web UI，统一管理模型、工作区、插件、工具与操作审批。",
                     buttonTitle: "启动官方 Harness",
                     action: manager.start
                 )
@@ -218,7 +218,8 @@ struct DeepSeekHarnessView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color(red: 0.035, green: 0.038, blue: 0.047))
+        .background(DynamicVisualTheme.canvasGradient)
+        .dynamicSurface(radius: DynamicVisualTheme.panelRadius, neonBorder: true)
     }
 
     private var harnessWorkspace: some View {
@@ -230,10 +231,11 @@ struct DeepSeekHarnessView: View {
                     .foregroundStyle(.white.opacity(0.62))
                 Text("官方开发者预览")
                     .font(.system(size: 9, weight: .semibold))
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(DynamicVisualTheme.orange)
                     .padding(.horizontal, 7)
                     .padding(.vertical, 3)
-                    .background(Color.orange.opacity(0.12), in: Capsule())
+                    .background(DynamicVisualTheme.orange.opacity(0.12), in: Capsule())
+                    .overlay(Capsule().strokeBorder(DynamicVisualTheme.orange.opacity(0.52), lineWidth: 0.9))
                 Spacer()
                 Button {
                     NSWorkspace.shared.open(DeepSeekHarnessManager.serverURL)
@@ -254,7 +256,7 @@ struct DeepSeekHarnessView: View {
             }
             .padding(.horizontal, 14)
             .frame(height: 38)
-            .background(Color.black.opacity(0.18))
+            .background(DynamicVisualTheme.card.opacity(0.92))
 
             DeepSeekHarnessWebView(url: DeepSeekHarnessManager.serverURL)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -270,8 +272,12 @@ struct DeepSeekHarnessView: View {
     ) -> some View {
         VStack(spacing: 18) {
             ZStack {
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .fill(Color.white.opacity(0.07))
+                RoundedRectangle(cornerRadius: DynamicVisualTheme.cardRadius, style: .continuous)
+                    .fill(DynamicVisualTheme.elevatedCard)
+                    .overlay {
+                        RoundedRectangle(cornerRadius: DynamicVisualTheme.cardRadius, style: .continuous)
+                            .strokeBorder(Color.white.opacity(0.08), lineWidth: 0.8)
+                    }
                 Image(systemName: icon)
                     .font(.system(size: 28, weight: .medium))
                     .foregroundStyle(.white.opacity(0.88))
@@ -297,8 +303,8 @@ struct DeepSeekHarnessView: View {
             if let buttonTitle, let action {
                 Button(buttonTitle, action: action)
                     .buttonStyle(.borderedProminent)
-                    .tint(.white)
-                    .foregroundStyle(.black)
+                    .tint(DynamicVisualTheme.orange)
+                    .foregroundStyle(.white)
             }
 
             Text("官方 Harness 可读写你在其界面中选择的工作区，并会在执行敏感操作前请求审批。")

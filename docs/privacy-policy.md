@@ -1,85 +1,51 @@
-# Privacy Policy
+# 简屿 · 灵动岛隐私说明
 
-Last updated: July 1, 2026
+更新日期：2026 年 9 月 28 日
 
-TRAE FLOW is a macOS utility for monitoring AI coding sessions from the macOS
-menu bar. This policy explains what information the app handles and how it is
-used.
+本说明描述本仓库当前实现的数据处理方式。简屿 · 灵动岛是 macOS 个人工作台与 AI 陪伴应用，应用名称为 `灵动岛.app`。使用者配置的 AI、网页、Apple 服务与其他第三方服务各自适用其隐私规则。
 
-## Data Collection
+## 本机保存的数据
 
-TRAE FLOW does not sell personal information and does not use advertising
-tracking.
+- **桌面文件夹**：`~/Desktop/灵动岛/` 保存需求资料、随笔、录音、截图、工作台和需求索引，以及手动备份的索引与提醒数据。
+- **运行目录**：`~/Library/Application Support/trae-flow/` 保存 AI 配置、普通记忆、资料库副本与文本索引、非 Dify 会话历史、模型调用记录和其他运行数据。设置也可能保存在 macOS UserDefaults 中。
+- **凭据**：模型 API Key 保存在权限为 `0600` 的本机凭据文件中；这是文件权限保护，不是对凭据正文的加密。
+- **隐私空间**：私密条目使用 AES-GCM 加密保存，密钥位于本机 macOS 钥匙串。界面使用 Touch ID／生物识别验证后解锁。普通记忆、资料、录音和会话历史不使用这一加密机制。
 
-The app is designed to process session information locally on your Mac. TRAE
-FLOW does not send your coding session content to the developer.
+TRAE 集成会在本机处理会话状态、消息、工具事件、项目与终端标识，用于状态展示、通知及跳回对应编辑器。启用的 Hook 集成会写入相关本机配置。
 
-TRAE FLOW may offer optional anonymous usage telemetry. The first-run
-onboarding includes a preselected consent checkbox for helping improve TRAE
-FLOW, and returning users may see a one-time Settings prompt. Telemetry is not
-uploaded until consent is confirmed, and it can be disabled in Settings at any
-time. When enabled, TRAE FLOW may send a small allowlist of product usage
-events, such as app launches, Hook installation results, client type categories,
-and coarse session lifecycle buckets, to help improve the app.
+## AI 服务与记忆
 
-Anonymous telemetry does not include prompts, responses, code, diffs, terminal
-output, project paths, file paths, repository names, usernames, hostnames, SSH
-targets, IP addresses, raw hook payloads, diagnostic contents, secrets, tokens,
-or API keys.
+发送模型请求时，应用会将当前消息、所需历史会话以及自动选入的已确认记忆、资料片段和禁止记忆规则，发送至你配置的 Dify、DeepSeek、OpenAI 或兼容服务端点。API Key 用于向相应服务认证。本机保存数据不表示模型在本机运行。
 
-## Data Processed Locally
+记忆提取根据明确语句规则运行；部分明确表达会自动确认，其余可能进入待确认或冲突状态。你可以查看来源、修改、删除记忆或设置禁止记忆规则。禁止记忆规则影响后续记忆提取与检索，但不会从已发送的消息、服务商数据或既有备份中撤回内容。规则文字本身会作为模型上下文发送，请避免把完整秘密写成规则。
 
-To provide its core features, TRAE FLOW may process information on your Mac
-such as:
+导入资料会复制原文件并尝试建立本地文本索引；模型请求中会包含检索得到的片段。隐私空间条目当前不进入该检索流程。
 
-- AI coding session status, events, prompts, responses, approvals, questions,
-  errors, and completion notifications.
-- Project, terminal, tmux, IDE, SSH, and session identifiers used to show the
-  right session and jump back to the right workspace.
-- Configuration files for supported local tools, including TRAE, TRAE CN,
-  TRAE WORK, and TRAE WORK CN.
-- User-configured custom areas (local HTML directories or remote URLs loaded in
-  the Flow Island left panel), music playback status from system media, and
-  temporary file shelf data managed through AirDrop.
-- User preferences such as display mode, sounds, shortcuts, mascot settings,
-  feature panel settings, and integration settings.
+非 Dify 会话历史由应用在本机保存。Dify 会话历史通过所配置的 Dify 服务查询和管理。模型调用记录保存服务商、模型、时间、耗时、状态、会话标识和输入字符数，不保存消息正文或 API Key；当前最多保留 500 条记录。
 
-This information is used to display session state, install or update local
-integrations you enable, route notifications, and return focus to related
-terminal or IDE windows.
+## 其他网络访问
 
-## Permissions
+- **天气**：使用 Open-Meteo 查询天气和城市。自动定位时会发送经纬度；手动设置城市时会发送城市名并查询对应坐标。城市反向解析使用 Apple 定位服务。
+- **语音转写**：录音文件保存在本机，识别使用 Apple Speech 框架。当前没有强制设备端识别，处理可能需要 Apple 网络服务。
+- **截图上传**：截图默认保存在本机。只有主动点击上传操作后，图片才发送到 `imgloc.com`，并返回可分享链接。请在上传前检查图中内容。
+- **内嵌网页**：抖音、音乐站点、自定义网址等会直接连接对应第三方网站，并可能使用 WebView Cookie 和网站存储。图标自动获取可能访问网站自身、Google 或 DuckDuckGo 的图标服务。
+- **DeepSeek Harness**：可选的开发者工作台通过 `npx` 获取并运行 `@deepseek-ai/dsh`，界面监听本机 `127.0.0.1:3080`。包下载、模型调用、插件和工作区文件操作由 Harness 及其配置决定。
+- **更新**：项目保留 Sparkle 更新机制；实际网络访问取决于发行包的更新源配置及更新操作。
 
-TRAE FLOW may request macOS permissions needed for its features, including:
+## 遥测代码
 
-- File access to user-selected folders or tool configuration locations.
-- Apple Events or Accessibility access for window focus and terminal jump-back
-  behavior.
-- Local network permissions for hook and bridge communication between supported
-  tools and the app.
+仓库保留来自上游的使用统计实现。其生效条件为本机 `analyticsEnabled` 设置为真，且构建同时提供有效的 SLS 接收端配置。本仓库的默认配置未提供接收端，未设置的 `analyticsEnabled` 默认按关闭处理；自行定制的构建或已有用户设置可能不同。
 
-You can manage these permissions in macOS System Settings.
+该实现允许的字段包括随机安装标识、应用与系统版本、架构、语言、界面模式、每日启动／会话数量、客户端类别及特定设置变化，采用字段白名单和每日数量限制。它不以消息正文、代码、资料、API Key 或私密条目为统计字段。服务端仍可能接收到常规网络连接信息；不能将所有网络请求描述为完全匿名。
 
-## Diagnostics
+## 权限、备份与删除
 
-TRAE FLOW may let you export diagnostics for troubleshooting. Diagnostic
-exports are user-initiated, saved to a location you choose, and are intended to
-redact secrets where possible. Review diagnostic files before sharing them in a
-GitHub issue or support request.
+应用按功能使用定位、麦克风、语音识别、通知、文件访问、截图，以及 Apple Events／辅助功能等系统能力。你可以在 macOS 系统设置中管理相应权限。
 
-## Third-Party Services
+工作台「立即备份」仅复制工作台、需求索引及提醒数据，不包括全部资料附件、录音、AI 运行目录和钥匙串密钥。请按自己的需要备份相关文件；若桌面目录由 iCloud 或其他同步工具管理，这些工具也可能同步其中的数据。
 
-TRAE FLOW can work with third-party developer tools and services that you
-install or configure separately. Those tools, remote hosts, Apple services,
-GitHub, and any AI providers you use have their own privacy practices. This
-policy only covers TRAE FLOW itself.
+应用提供记忆、资料、会话和私密条目的删除操作。删除本机副本不会自动删除独立备份、已上传截图或服务商保留的数据；它们需要通过对应存储或服务管理。分享截图、日志、备份和诊断文件前，请检查是否包含个人信息。
 
-If optional anonymous telemetry is enabled, TRAE FLOW may use Alibaba Cloud
-Simple Log Service to store product usage events. See
-`docs/telemetry.md` for the current event and field allowlist.
+## 联系
 
-## Contact
-
-For privacy questions or support, open an issue at:
-
-https://github.com/ccsonicc333/trae-flow/issues
+可通过 [项目 Issues](https://github.com/maomengen888-maker/trae-flow/issues) 反馈隐私问题。请勿在公开 Issue 中提交 API Key、私密记录或完整个人数据。

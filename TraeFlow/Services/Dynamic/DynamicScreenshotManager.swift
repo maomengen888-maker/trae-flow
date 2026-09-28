@@ -46,9 +46,9 @@ final class DynamicScreenshotManager: ObservableObject {
     private func startRegionCapture(shouldRestorePinnedWindow: Bool) {
         guard isCapturing else { return }
 
-        let directory = BridgeRuntimePaths.runtimeDirectoryURL
-            .appendingPathComponent("screenshots", isDirectory: true)
+        let directory = DynamicUserStoragePaths.screenshotsURL
         do {
+            try DynamicUserStoragePaths.prepareDirectories()
             try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         } catch {
             isCapturing = false
@@ -58,7 +58,7 @@ final class DynamicScreenshotManager: ObservableObject {
 
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyyMMdd-HHmmss"
-        let destination = directory.appendingPathComponent("简屿-\(formatter.string(from: Date())).png")
+        let destination = directory.appendingPathComponent("灵动岛-\(formatter.string(from: Date())).png")
 
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/sbin/screencapture")
@@ -173,7 +173,7 @@ final class DynamicScreenshotManager: ObservableObject {
         body.appendMultipart("Content-Disposition: form-data; name=\"token\"\r\n\r\n")
         body.appendMultipart("\(token)\r\n")
         body.appendMultipart("--\(boundary)\r\n")
-        body.appendMultipart("Content-Disposition: form-data; name=\"image\"; filename=\"简屿.png\"\r\n")
+        body.appendMultipart("Content-Disposition: form-data; name=\"image\"; filename=\"灵动岛.png\"\r\n")
         body.appendMultipart("Content-Type: image/png\r\n\r\n")
         body.append(imageData)
         body.appendMultipart("\r\n--\(boundary)--\r\n")
@@ -247,7 +247,7 @@ private final class DynamicPinnedScreenshotWindowController: NSWindowController,
             backing: .buffered,
             defer: false
         )
-        panel.title = "简屿截图置顶"
+        panel.title = "灵动岛截图置顶"
         panel.level = .floating
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         panel.isReleasedWhenClosed = false

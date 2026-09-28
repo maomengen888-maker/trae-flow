@@ -6,6 +6,22 @@ DerivedData/
 # Secrets
 Config/LocalSecrets.xcconfig
 .sparkle-keys/
+.env
+.env.*
+!.env.example
+*.p12
+*.p8
+*.key
+
+# Local review screenshots and user runtime data
+design-audit/
+dynamic-ai-credentials.json
+dynamic-ai-conversations.json
+dynamic-reminders.json
+private-vault.sealed
+/companion/
+personal-workspace.json
+dynamic-requirements.json
 
 # macOS
 .DS_Store
@@ -33,3 +49,7 @@ default.profraw
 
 # Override global *.zip ignore for bundled resources
 !TraeFlow/Resources/MediaRemoteAdapter.zip
+
+# Product requirements are kept local and excluded from publication
+/docs/*PRD*.docx
+/docs/简屿陪伴型AI产品需求文档-*.docx

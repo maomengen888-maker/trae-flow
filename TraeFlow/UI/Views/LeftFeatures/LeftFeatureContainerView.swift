@@ -6,6 +6,8 @@ import SwiftUI
 /// `VStack(alignment: .leading)` 确保切换栏左对齐；主内容区用 `.frame(maxWidth: .infinity)`
 /// 占满宽度。
 struct LeftFeatureContainerView: View {
+    var isCompactPreview = false
+    var onModalInteractionStateChanged: (Bool) -> Void = { _ in }
     @ObservedObject private var featureStore = LeftFeatureStore.shared
     @ObservedObject private var customAreaStore = CustomAreaStore.shared
     @ObservedObject private var settings = AppSettings.shared
@@ -39,16 +41,30 @@ struct LeftFeatureContainerView: View {
     @ViewBuilder
     private func mainContent(for feature: LeftFeature) -> some View {
         switch feature.kind {
+        case .workspace:
+            DynamicWorkspaceView(
+                compactPreview: isCompactPreview,
+                onModalInteractionStateChanged: onModalInteractionStateChanged
+            )
         case .appManager:
-            DynamicAppManagerView()
+            DynamicWorkspaceView(
+                compactPreview: isCompactPreview,
+                onModalInteractionStateChanged: onModalInteractionStateChanged
+            )
         case .requirementManager:
-            RequirementManagerView()
+            RequirementManagerView(onModalInteractionStateChanged: onModalInteractionStateChanged)
         case .monitorReminders:
-            MonitorRemindersView()
+            DynamicWorkspaceView(
+                compactPreview: isCompactPreview,
+                onModalInteractionStateChanged: onModalInteractionStateChanged
+            )
         case .douyin:
             DouyinBrowserView()
         case .music:
-            AppleMusicEmbeddedView()
+            DynamicWorkspaceView(
+                compactPreview: isCompactPreview,
+                onModalInteractionStateChanged: onModalInteractionStateChanged
+            )
         case .shelf:
             ShelfExpandedView()
         case .customArea(let areaID):

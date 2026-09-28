@@ -20,9 +20,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         _ = AppSettings.shared
         _ = LeftFeatureStore.shared
         _ = DynamicScreenshotManager.shared
+        _ = DynamicPersonalWorkspaceStore.shared
 
         // Dynamic 主面板不固定：点击其他应用或面板外部时自动收起。
-        // 截图图片仍可通过底部工具栏独立置顶。
+        // 截图功能保留全局快捷键入口；今日工作台不放置常驻截图工具栏。
         AppSettings.keepIslandOpen = false
 
         // 正常启动时默认回到 Flow Island 形态，避免测试/开发残留把 surfaceMode 设为 floatingPet。
@@ -33,6 +34,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         if !launchConfiguration.isRunningTests {
             UpdateManager.shared.start()
             UserIdleAutoProtection.shared.start()
+            DynamicReminderStore.shared.requestNotificationPermissionIfNeeded()
         }
 
         if launchConfiguration.shouldInstallIntegrations {
@@ -81,29 +83,26 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
                 self?.startWindowManagerIfNeeded()
                 self?.windowManager?.presentationCoordinator?.requestDockedWindowVisibilityRefresh()
-                LeftFeatureStore.shared.setExpandedActiveFeature(id: LeftFeature.appManagerID)
+                LeftFeatureStore.shared.setExpandedActiveFeature(id: LeftFeature.workspaceID)
                 self?.windowManager?.presentationCoordinator?.viewModel.presentCustomExpanded(reason: .boot)
             }
         }
 
         globalShortcutManager.start()
 
-        // Dynamic 仅展示产品核心五页，不再注入 TRAE 自定义演示入口。
+        // 今日工作台是默认入口；拖音保留为独立娱乐页。
 
         // Spec: 延迟启动 MediaRemote Now Playing 轮询 —— 避免应用启动时
         // `MRMediaRemoteRegisterForNowPlayingNotifications` 的 arm64↔arm64e PAC 崩溃。
-        // 仅当音乐功能或 Mineradio 功能已启用时启动（Mineradio 需要 MediaRemote 驱动歌词 progression）。
+        // 今日工作台常驻原生音乐迷你控制器，因此始终启动 Now Playing 轮询。
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
             let features = LeftFeatureStore.shared.features
-            let musicEnabled = features.contains { $0.kind == .music && $0.isEnabled }
             let mineradioEnabled = features.contains {
                 if case .mineradio = $0.kind, $0.isEnabled { return true }
                 return false
             }
-            NSLog("[AppDelegate] 音乐功能启用状态: \(musicEnabled) mineradio=\(mineradioEnabled) (features.count=\(features.count))")
-            if musicEnabled || mineradioEnabled {
-                NowPlayingProvider.shared.start()
-            }
+            NSLog("[AppDelegate] 启动工作台音乐状态轮询 mineradio=\(mineradioEnabled) (features.count=\(features.count))")
+            NowPlayingProvider.shared.start()
             // Spec: mineradio-bridge-compat-layer —— 即使未展开过 Mineradio，也启动 NowPlaying 订阅
             // 以便 MediaRemote 检测到 Mineradio 播放时立即更新 playback 状态（歌词 progression 需要）
             if mineradioEnabled {
@@ -115,7 +114,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         startWindowManagerIfNeeded()
-        LeftFeatureStore.shared.setExpandedActiveFeature(id: LeftFeature.appManagerID)
+        LeftFeatureStore.shared.setExpandedActiveFeature(id: LeftFeature.workspaceID)
         windowManager?.presentationCoordinator?.viewModel.presentCustomExpanded(reason: .click)
         windowManager?.presentationCoordinator?.requestDockedWindowVisibilityRefresh()
         return true

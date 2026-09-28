@@ -49,6 +49,7 @@ func resolveIconKind(_ identifier: String?) -> IconKind {
 /// - newsnow: 内置 NewsNow 热点新闻功能，关联实例 baseURL（Spec: add-newsnow-built-in-feature）
 /// - mineradio: 内置 Mineradio 矿石电台，关联 pageURL，注入 Bridge 兼容层 + JSC 引擎（Spec: mineradio-bridge-compat-layer）
 enum LeftFeatureKind: Codable, Equatable, Hashable {
+    case workspace
     case appManager
     case requirementManager
     case monitorReminders
@@ -168,6 +169,7 @@ extension LeftFeature {
     static let mineradioID = "mineradio"
     /// 内置 AI 热搜 webURL 功能（https://aihot.virxact.com/），默认启用且排在第一位
     static let aihotID = "aihot"
+    static let workspaceID = "dynamic-workspace"
     static let appManagerID = "dynamic-app-manager"
     static let requirementManagerID = "dynamic-requirement-manager"
     static let monitorRemindersID = "dynamic-monitor-reminders"
@@ -179,6 +181,8 @@ extension LeftFeature {
             return customIconName
         }
         switch kind {
+        case .workspace:
+            return "rectangle.grid.2x2.fill"
         case .appManager:
             return "square.grid.3x3.fill"
         case .requirementManager:
@@ -213,6 +217,8 @@ extension LeftFeature {
             return customDisplayName
         }
         switch kind {
+        case .workspace:
+            return "今日"
         case .appManager:
             return "APP 管理"
         case .requirementManager:

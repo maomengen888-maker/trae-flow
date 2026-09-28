@@ -1,5 +1,5 @@
 #!/bin/bash
-# Build 简屿 for release
+# Build 灵动岛 for release
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -16,7 +16,7 @@ ENABLE_HARDENED_RUNTIME="${TRAE_FLOW_ENABLE_HARDENED_RUNTIME:-YES}"
 SCHEME="${TRAE_FLOW_SCHEME:-TraeFlow}"
 PROJECT_FILE="${TRAE_FLOW_PROJECT_FILE:-TraeFlow.xcodeproj}"
 
-echo "=== Building 简屿 ==="
+echo "=== Building 灵动岛 ==="
 echo ""
 
 # Clean previous builds
@@ -99,6 +99,6 @@ fi
 
 echo ""
 echo "=== Build Complete ==="
-echo "App exported to: $EXPORT_PATH/简屿.app"
+echo "App exported to: $EXPORT_PATH/灵动岛.app"
 echo ""
 echo "Next: Run ./scripts/create-release.sh to notarize and create DMG"
