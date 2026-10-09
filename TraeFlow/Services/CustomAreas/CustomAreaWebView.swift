@@ -133,6 +133,72 @@ struct CustomAreaWebView: NSViewRepresentable {
         setTimeout(applyMobileLayout, 500);
     })();
     """
+    /// 抖音直播桌面布局会在播放器顶部保留站点自己的导航/工具栏高度。
+    /// 在 Dynamic 已有原生抖音标题栏的情况下，这段高度只表现为 WebView 顶部的黑色空框，
+    /// 并且会把直播画面与右侧聊天室整体向下推开。隐藏站点顶部层并清掉播放器预留的
+    /// padding，让视频和聊天室从 WebView 的内容顶端开始；MutationObserver 覆盖抖音 SPA
+    /// 路由切换时重新创建这些节点的情况。
+    static let douyinDesktopLayoutScript = """
+    (function () {
+        var styleID = "dynamic-douyin-desktop-layout";
+        var css = `
+            /* The host app already supplies the title bar for the embedded live room. */
+            html.dynamic-douyin-live #HeaderLayout,
+            html.dynamic-douyin-live .douyin-player .douyin-player-top-bar,
+            html.dynamic-douyin-live div[data-e2e="living-container"] xg-bar.xg-top-bar,
+            html.dynamic-douyin-live div[data-e2e="living-container"] div[id*="living_room_player_container"] > pace-island[id^="island_"],
+            html.dynamic-douyin-live div[data-e2e="living-container"] div[id*="living_room_player_container"] > div > div > pace-island[id^="island_"]:has(.__isFullPlayer) {
+                display: none !important;
+            }
+
+            /* Removing the top bar must also remove the height reserved for it. */
+            html.dynamic-douyin-live,
+            html.dynamic-douyin-live body,
+            html.dynamic-douyin-live #PlayerLayout,
+            html.dynamic-douyin-live #PlayerLayout [id^="living_player_container"],
+            html.dynamic-douyin-live #PlayerLayout [id*="living_room_player_container"] {
+                margin: 0 !important;
+                padding-top: 0 !important;
+            }
+            html.dynamic-douyin-live body {
+                overflow-x: hidden !important;
+            }
+        `;
+
+        function updateLiveScope() {
+            if (!document.documentElement) { return; }
+            var liveRoot = document.querySelector(
+                '[data-e2e="living-container"], #PlayerLayout [id^="living_player_container"], #PlayerLayout [id*="living_room_player_container"]'
+            );
+            document.documentElement.classList.toggle("dynamic-douyin-live", Boolean(liveRoot));
+        }
+
+        function syncLayout() {
+            var root = document.head || document.documentElement;
+            if (!root) { return; }
+            var style = document.getElementById(styleID);
+            if (!style) {
+                style = document.createElement("style");
+                style.id = styleID;
+                root.appendChild(style);
+            }
+            if (style.textContent !== css) {
+                style.textContent = css;
+            }
+            updateLiveScope();
+        }
+
+        syncLayout();
+        if (document.documentElement) {
+            new MutationObserver(syncLayout).observe(document.documentElement, {
+                childList: true,
+                subtree: true
+            });
+        } else {
+            document.addEventListener("DOMContentLoaded", syncLayout, { once: true });
+        }
+    })();
+    """
     /// JS Bridge 消息处理器名称 —— HTML 端通过 `window.webkit.messageHandlers.traeFlowHint` 调用
     static let hintMessageHandlerName = "traeFlowHint"
     /// JS Bridge 系统指标消息处理器 —— HTML 端通过 `window.webkit.messageHandlers.traeFlowMetrics` 请求指标
@@ -512,6 +578,12 @@ struct CustomAreaWebView: NSViewRepresentable {
             if source.prefersDouyinMobileLayout {
                 configuration.userContentController.addUserScript(WKUserScript(
                     source: Self.douyinMobileLayoutScript,
+                    injectionTime: .atDocumentStart,
+                    forMainFrameOnly: true
+                ))
+            } else {
+                configuration.userContentController.addUserScript(WKUserScript(
+                    source: Self.douyinDesktopLayoutScript,
                     injectionTime: .atDocumentStart,
                     forMainFrameOnly: true
                 ))
