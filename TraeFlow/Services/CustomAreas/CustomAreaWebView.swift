@@ -144,6 +144,8 @@ struct CustomAreaWebView: NSViewRepresentable {
         var css = `
             /* The host app already supplies the title bar for the embedded live room. */
             html.dynamic-douyin-live #HeaderLayout,
+            html.dynamic-douyin-live #douyin-header,
+            html.dynamic-douyin-live main.live-main > #douyin-header,
             html.dynamic-douyin-live .douyin-player .douyin-player-top-bar,
             html.dynamic-douyin-live div[data-e2e="living-container"] xg-bar.xg-top-bar,
             html.dynamic-douyin-live div[data-e2e="living-container"] div[id*="living_room_player_container"] > pace-island[id^="island_"],
@@ -159,6 +161,17 @@ struct CustomAreaWebView: NSViewRepresentable {
             html.dynamic-douyin-live #PlayerLayout [id*="living_room_player_container"] {
                 margin: 0 !important;
                 padding-top: 0 !important;
+            }
+            /* Current Douyin desktop live DOM uses a 60px #douyin-header and
+               reserves that header height on the live layout wrapper. */
+            html.dynamic-douyin-live main.live-main,
+            html.dynamic-douyin-live .live-main {
+                margin-top: 0 !important;
+                padding-top: 0 !important;
+            }
+            html.dynamic-douyin-live main.live-main .juSoeZQJ.lG3F75Kf,
+            html.dynamic-douyin-live .live-main .juSoeZQJ.lG3F75Kf {
+                margin-top: 0 !important;
             }
             html.dynamic-douyin-live body {
                 overflow-x: hidden !important;
